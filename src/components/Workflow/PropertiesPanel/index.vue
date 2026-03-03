@@ -29,8 +29,11 @@
           @update:model-value="updateNodeConfig"
         />
       </template>
-      <template v-else-if="currentNode.type === 'inputs'">
-        <InputProperty :id="currentNode.id" @updateProperties="updateInputProperties" />
+      <template v-if="currentNode.type === 'inputs'">
+        <InputProperty :nodeId="currentNode.id" @updateProperties="updateInputProperties" />
+      </template>
+      <template v-if="currentNode.type === 'outputs'">
+        <OutputProperty :nodeId="currentNode.id" />
       </template>
     </div>
   </div>
@@ -42,6 +45,7 @@ import { XIcon } from 'lucide-vue-next'
 import { useWorkflowStore } from '@/stores/workflow'
 import ObjectDetectionModeProperty from './ObjectDetectionModeProperty.vue'
 import InputProperty from './InputProperty.vue'
+import OutputProperty from './OutputProperty.vue'
 
 const store = useWorkflowStore()
 

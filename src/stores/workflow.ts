@@ -28,6 +28,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
       position: { x: 50, y: 300 },
       data: { label: 'Object_Detction_Model' },
     },
+    {
+      id: 'outputs',
+      type: 'outputs',
+      position: { x: 100, y: 500 },
+      data: { label: 'outputs' },
+    }
   ])
   // 边
   const edges = ref<Edge[]>([
@@ -45,6 +51,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
         stroke: '#555',
       },
     },
+    {
+      id: 'edge-2-3',
+      source: 'object_detection_model',
+      target: 'outputs',
+      animated: true,
+      type: 'button',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#555',
+      },
+      style: {
+        stroke: '#555',
+      },
+    }
   ])
   const selectedNode = ref<Node | null>(null)
 
