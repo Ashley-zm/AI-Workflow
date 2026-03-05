@@ -1,7 +1,9 @@
 <template>
-  <div class="flex h-screen w-full overflow-hidden bg-slate-50" @drop="onDrop" @dragover.prevent>
-    <Sidebar @drag-start="onDragStart" />
-
+  <div
+    class="flex h-screen w-full overflow-hidden bg-slate-50"
+    @drop="onDrop"
+    @dragover.prevent
+  >
     <div class="flex-1 h-full relative">
       <VueFlow
         class="basic-flow bg-white"
@@ -15,6 +17,10 @@
         fit-view-on-init
         :min-zoom="0.2"
         :max-zoom="4"
+        :pan-on-drag="!isLocked"
+        :nodes-draggable="!isLocked"
+        :nodes-connectable="!isLocked"
+        :elements-selectable="!isLocked"
       >
         <template #edge-button="buttonEdgeProps">
           <EdgeWithButton
@@ -30,32 +36,47 @@
           />
         </template>
         <Background pattern-color="#999" :gap="24" :size="1.5" />
-        <Controls
-          position="top-left"
-          class="!m-4 p-1 bg-white rounded-lg shadow-md border border-gray-200"
-        >
-          <ControlButton title="撤销 (Ctrl+Z)" @click="handleUndoClick" :disabled="!store.canUndo">
-            <Undo2 :size="16" />
-          </ControlButton>
-          <ControlButton title="重做 (Ctrl+Y)" @click="handleRedoClick" :disabled="!store.canRedo">
-            <Redo2 :size="16" />
-          </ControlButton>
-          <ControlButton title="重新排列节点位置" @click="updatePos">
-            <RefreshCcw :size="16" />
-          </ControlButton>
-        </Controls>
+        <MiniMap v-if="showMinimap" class="mini-map" :pannable="true" :zoomable="true" />
       </VueFlow>
+
+      <!-- 控制按钮栏 -->
+      <ControlBar
+        :can-undo="store.canUndo"
+        :can-redo="store.canRedo"
+        :is-locked="isLocked"
+        :show-minimap="showMinimap"
+        @undo="handleUndoClick"
+        @redo="handleRedoClick"
+        @auto-layout="autoLayout"
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @toggle-lock="toggleLock"
+        @toggle-minimap="toggleMinimap"
+        @fit-view="handleFitView"
+      />
+
+      <!-- 悬浮按钮组件 -->
+      <FloatingButton
+        @drag-start="onDragStart"
+        @select-component="handleComponentSelect"
+      />
     </div>
 
-    <div v-if="store.selectedNode" class="w-96 border-l border-gray-200 shadow-2xl relative z-10">
+    <div
+      v-if="store.selectedNode"
+      class="w-96 rounded-lg border-l border-gray-200 shadow-2xl absolute right-0 top-10 z-10"
+    >
       <PropertiesPanel />
     </div>
 
-    <!-- 演示控制组件 -->
+    <!-- 演示控制组件历史记录 -->
     <!-- <DemoControls /> -->
 
     <!-- 组件库选择弹窗 -->
-    <ComponentLibraryModal ref="componentLibraryModal" @select-component="handleComponentSelect" />
+    <ComponentLibraryModal
+      ref="componentLibraryModal"
+      @select-component="handleComponentSelect"
+    />
   </div>
 </template>
 
@@ -63,11 +84,11 @@
 import '@vue-flow/controls/dist/style.css'
 import { VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
-import { ControlButton, Controls } from '@vue-flow/controls'
+import { MiniMap } from '@vue-flow/minimap'
 import { useWorkflowStore } from '@/stores/workflow'
 import PropertiesPanel from '@/components/Workflow/PropertiesPanel/index.vue'
-import Sidebar from '@/components/Workflow/Sidebar.vue'
-import { RefreshCcw, Undo2, Redo2 } from 'lucide-vue-next'
+import FloatingButton from '@/components/Workflow/FloatingButton.vue'
+import ControlBar from '@/components/Workflow/ControlBar.vue'
 import { nodeTypes, getNodeType } from '@/components/Workflow/Nodes/nodeTypes'
 import { onMounted, onUnmounted, ref, computed, markRaw } from 'vue'
 // import DemoControls from '@/components/Workflow/DemoControls.vue'
@@ -76,7 +97,25 @@ import EdgeWithButton from '@/components/Workflow/EdgeWithButton.vue'
 import { MarkerType } from '@vue-flow/core'
 
 const store = useWorkflowStore()
-const { onInit, project, onConnect, addNodes, addEdges } = useVueFlow()
+const { onInit, project, onConnect, addNodes, addEdges, viewport, fitView } = useVueFlow()
+
+// 状态变量
+const isLocked = ref(false)
+const showMinimap = ref(false)
+
+// 放大/缩小/适合视图函数
+const handleZoomIn = () => {
+  viewport.value.zoom = Math.min(viewport.value.zoom + 0.1, 4)
+}
+
+const handleZoomOut = () => {
+  viewport.value.zoom = Math.max(viewport.value.zoom - 0.1, 0.2)
+}
+
+const handleFitView = () => {
+  // 使用VueFlow的fitView功能
+  fitView({ padding: 0.2 })
+}
 
 // 修改节点数据以包含事件处理器
 const nodesWithEvents = computed(() => {
@@ -180,24 +219,13 @@ onUnmounted(() => {
 
 // 节点点击事件
 const onNodeClick = (event: NodeMouseEvent) => {
-  // 确保 config 存在，防止报错
-  // if (!event.node.data.config) {
-  //   if (event.node.type === 'object_detection_model') {
-  //     event.node.data.config = {
-  //       imagePath: '',
-  //       model: '',
-  //       modelInfo: null,
-  //     }
-  //   } else {
-  //     event.node.data.config = { prompt: '', model: 'gpt-3.5-turbo' }
-  //   }
-  // }
   console.log('点击节点:', event.node.id, event.node.type, event.node.data.config)
   store.setSelectedNode(event.node.id)
 }
 
 // --- 拖拽逻辑 ---
 const onDragStart = (event: DragEvent, type: string) => {
+  console.log('拖拽开始:', type)
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vueflow', type)
     event.dataTransfer.effectAllowed = 'move'
@@ -244,16 +272,213 @@ const onDrop = (event: DragEvent) => {
   // 使用 store 的 addNode 方法来确保历史记录被正确记录
   store.addNode(newNode)
 }
-const updatePos = () => {
+// 自动布局函数
+const autoLayout = () => {
+  console.log('自动布局函数被调用')
   const nodes = store.nodes
-  nodes.forEach((node) => {
-    node.position = {
-      x: Math.random() * 500,
-      y: Math.random() * 500,
+  const edges = store.edges
+  
+  console.log('节点数量:', nodes.length, '边数量:', edges.length)
+  
+  // 设置布局参数
+  const verticalSpacing = 180 // 节点之间的垂直间距
+  const horizontalSpacing = 300 // 节点之间的水平间距
+  // 屏幕宽度的中间
+  const startX = window.innerWidth / 4 // 起始X坐标（居中）
+  console.log('起始X坐标:', window.innerWidth, startX);
+  
+  const startY = 0 // 起始Y坐标
+  
+  // 创建节点层级关系 - 完全基于边关系，不考虑原始位置
+  const nodeLevels: Record<string, number> = {}
+  const processedNodes: Record<string, boolean> = {}
+  const nodeParents: Record<string, string[]> = {} // 记录每个节点的父节点
+  const nodeChildren: Record<string, string[]> = {} // 记录每个节点的子节点
+  
+  // 重置所有节点的处理状态
+  nodes.forEach(node => {
+    processedNodes[node.id] = false
+    nodeParents[node.id] = []
+    nodeChildren[node.id] = []
+  })
+  
+  // 根据边建立父子关系
+  edges.forEach(edge => {
+    if (!nodeParents[edge.target]) {
+      nodeParents[edge.target] = []
+    }
+    if (!nodeChildren[edge.source]) {
+      nodeChildren[edge.source] = []
+    }
+    nodeParents[edge.target]!.push(edge.source)
+    nodeChildren[edge.source]!.push(edge.target)
+  })
+  
+  // 优先找出类型为'inputs'的节点作为根节点
+  const inputNodes = nodes.filter(node => node.type === 'inputs')
+  console.log('输入节点:', inputNodes)
+  
+  // 为输入节点设置层级0
+  inputNodes.forEach(node => {
+    nodeLevels[node.id] = 0
+    processedNodes[node.id] = true
+  })
+  
+  // 如果没有inputs节点，找出没有入边的节点作为起始节点
+  if (inputNodes.length === 0) {
+    const noIncomingEdgeNodes = nodes.filter(node => {
+      return !edges.some(edge => edge.target === node.id)
+    })
+    
+    console.log('无入边节点:', noIncomingEdgeNodes)
+    
+    noIncomingEdgeNodes.forEach(node => {
+      nodeLevels[node.id] = 0
+      processedNodes[node.id] = true
+    })
+  }
+  
+  // 如果仍然没有起始节点（例如环形连接），选择第一个节点作为起始节点
+  if (Object.keys(nodeLevels).length === 0 && nodes.length > 0) {
+    const firstNode = nodes[0]
+    if (firstNode) {
+      nodeLevels[firstNode.id] = 0
+      processedNodes[firstNode.id] = true
+      console.log('选择第一个节点作为起始节点:', firstNode.id)
+    }
+  }
+  
+  // 使用BFS计算节点层级 - 完全基于边关系
+  const queue: string[] = Object.keys(nodeLevels).filter(nodeId => nodeLevels[nodeId] === 0)
+  
+  while (queue.length > 0) {
+    const currentNodeId = queue.shift()!
+    const currentLevel = nodeLevels[currentNodeId]
+    
+    // 处理当前节点的所有子节点
+    const children = nodeChildren[currentNodeId]
+    if (children) {
+      children.forEach(childNodeId => {
+        if (!processedNodes[childNodeId]) {
+          // 检查是否所有父节点都已处理
+          const parents = nodeParents[childNodeId]
+          if (parents) {
+            const allParentsProcessed = parents.every(parentId => processedNodes[parentId])
+            
+            if (allParentsProcessed) {
+              // 计算子节点的层级（所有父节点层级的最大值+1）
+              const maxParentLevel = Math.max(...parents.map(parentId => nodeLevels[parentId] || 0))
+              nodeLevels[childNodeId] = maxParentLevel + 1
+              processedNodes[childNodeId] = true
+              queue.push(childNodeId)
+            }
+          }
+        }
+      })
+    }
+  }
+  
+  // 为未处理的节点分配层级
+  nodes.forEach(node => {
+    if (!processedNodes[node.id]) {
+      if (node.type === 'outputs') {
+        // 输出节点放在最后
+        const maxLevel = Math.max(...Object.values(nodeLevels), 0)
+        nodeLevels[node.id] = maxLevel + 1
+        processedNodes[node.id] = true
+      } else {
+        // 其他节点放在中间
+        nodeLevels[node.id] = 1
+        processedNodes[node.id] = true
+      }
     }
   })
-  // 记录重排后的状态
-  store.historyStore.recordState(store.nodes, store.edges, 'rearrange_nodes')
+  
+  console.log('节点层级:', nodeLevels)
+  
+  // 按层级分组节点
+  const levels: Record<number, any[]> = {}
+  Object.keys(nodeLevels).forEach(nodeId => {
+    const level = nodeLevels[nodeId]
+    if (level !== undefined && level !== null) {
+      if (!levels[level]) {
+        levels[level] = []
+      }
+      const node = nodes.find(n => n.id === nodeId)
+      if (node) {
+        levels[level].push(node)
+      }
+    }
+  })
+  
+  // 按层级排序
+  const sortedLevels = Object.keys(levels).map(Number).sort((a, b) => a - b)
+  
+  // 设置节点位置 - 完全重新计算位置，不考虑原始位置
+  sortedLevels.forEach(level => {
+    const levelNodes = levels[level]
+    if (!levelNodes) {
+      return
+    }
+    
+    // 计算该层节点的位置
+    const levelNodeCount = levelNodes.length
+    const levelTotalWidth = (levelNodeCount - 1) * horizontalSpacing
+    const levelStartX = startX - levelTotalWidth / 2
+    
+    // 对同层节点进行排序，使布局更加有序
+    levelNodes.sort((a, b) => {
+      // 如果两个节点有共同的父节点，按照父节点的顺序排列
+      const aParents = nodeParents[a.id] || []
+      const bParents = nodeParents[b.id] || []
+      
+      // 如果有共同的父节点，按照父节点的层级和位置排序
+      const commonParent = aParents.find(parentId => bParents.includes(parentId))
+      if (commonParent) {
+        const parentLevel = nodeLevels[commonParent]
+        if (parentLevel !== undefined) {
+          const parentNodes = levels[parentLevel] || []
+          const parentIndex = parentNodes.findIndex(n => n.id === commonParent)
+          if (parentIndex !== -1) {
+            // 根据父节点在层级中的位置确定子节点的相对顺序
+            return 0
+          }
+        }
+      }
+      
+      // 默认按节点ID排序
+      return a.id.localeCompare(b.id)
+    })
+    
+    levelNodes.forEach((node, index) => {
+      if (!node) return
+      
+      // 计算节点位置 - 完全重新计算
+      const x = levelStartX + index * horizontalSpacing
+      const y = startY + level * verticalSpacing
+      console.log('节点位置:', node.id, { x, y })
+      // 更新节点位置 - 完全基于边关系的新位置
+      node.position = {
+        x,
+        y
+      }
+    })
+  })
+  
+  console.log('布局后的节点位置:', nodes.map(n => ({ id: n.id, position: n.position })))
+  
+  // 记录布局后的状态
+  store.historyStore.recordState(store.nodes, store.edges, 'auto_layout')
+}
+
+// 切换锁定状态
+const toggleLock = () => {
+  isLocked.value = !isLocked.value
+}
+
+// 切换迷你地图显示状态
+const toggleMinimap = () => {
+  showMinimap.value = !showMinimap.value
 }
 
 // 节点拖拽结束事件
@@ -411,5 +636,18 @@ const handleComponentSelect = (componentType: string, handleInfo: any) => {
 .slide-fade-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+/* 迷你地图样式 */
+.mini-map {
+  position: absolute !important;
+  bottom: 70px !important;
+  right: 10px !important;
+  width: 200px !important;
+  height: 150px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 </style>

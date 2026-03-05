@@ -4,16 +4,25 @@
     <div class="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
       <div
         v-if="currentLevel === 'children' && selectedParent"
-        class="flex items-center gap-2 cursor-pointer hover:text-blue-500"
+        class="flex  items-center gap-2 text-slate-500 cursor-pointer hover:text-blue-500"
         @click="goBack"
       >
         <ChevronLeft :size="18" />
-        <span class="font-medium">返回</span>
+        <span class="font-medium ">返回</span>
       </div>
       <div class="text-slate-700 font-bold text-center flex-1 text-lg">
-        {{ currentLevel === 'children' && selectedParent ? selectedParent.name : '组件库' }}
+        {{
+          currentLevel === "children" && selectedParent
+            ? selectedParent.name
+            : "选择工作流节点"
+        }}
       </div>
-      <div v-if="currentLevel === 'children'" class="w-14"></div>
+
+      <X
+        :size="28"
+        @click="emit('closeBar')"
+        class="text-slate-500 cursor-pointer hover:bg-gray-100 p-1 rounded-full"
+      />
     </div>
 
     <!-- 父级列表 -->
@@ -68,7 +77,10 @@
     </div>
 
     <!-- 子级列表 -->
-    <div v-if="currentLevel === 'children' && selectedParent" class="flex-1 overflow-y-auto p-4">
+    <div
+      v-if="currentLevel === 'children' && selectedParent"
+      class="flex-1 overflow-y-auto p-4"
+    >
       <div class="space-y-2">
         <div
           v-for="(child, childIndex) in selectedParent.children"
@@ -113,9 +125,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { nodeTypesList } from '@/components/Workflow/Nodes/nodeTypes'
-import { ChevronRight, ChevronLeft } from 'lucide-vue-next'
+import { X } from "lucide-vue-next";
+import { ref } from "vue";
+import { nodeTypesList } from "@/components/Workflow/Nodes/nodeTypes";
+import { ChevronRight, ChevronLeft } from "lucide-vue-next";
 import {
   getIconComponent,
   getHoverClasses,
@@ -124,32 +137,34 @@ import {
   getHoverTextColor,
   getChildHoverClasses,
   getChildIconClasses,
-} from '@/components/Workflow/Nodes/nodeConfig'
+} from "@/components/Workflow/Nodes/nodeConfig";
 // 定义事件
 const emit = defineEmits<{
-  dragStart: [event: DragEvent, type: string]
-}>()
+  dragStart: [event: DragEvent, type: string];
+  closeBar: [];
+}>();
 
 // 状态管理
-const currentLevel = ref<'parent' | 'children'>('parent')
-const selectedParent = ref<any>(null)
+const currentLevel = ref<"parent" | "children">("parent");
+const selectedParent = ref<any>(null);
 
 // 显示子级列表
 const showChildren = (item: any) => {
-  selectedParent.value = item
-  currentLevel.value = 'children'
-}
+  selectedParent.value = item;
+  currentLevel.value = "children";
+};
 
 // 返回父级列表
 const goBack = () => {
-  currentLevel.value = 'parent'
-  selectedParent.value = null
-}
+  currentLevel.value = "parent";
+  selectedParent.value = null;
+};
 
 // 拖拽开始事件
 const onDragStart = (event: DragEvent, item: any) => {
-  emit('dragStart', event, item.type)
-}
+  console.log("拖拽开始11:", event,item.type);
+  emit("dragStart", event, item);
+};
 </script>
 
 <style scoped>

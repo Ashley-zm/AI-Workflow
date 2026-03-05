@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group relative min-w-[260px] bg-white rounded-xl hover:shadow-lg transition-all"
+    class="group relative w-[260px] bg-white rounded-xl hover:shadow-lg transition-all"
     :class="[
       selected
         ? 'border-l-4 border-y-1 border-r-1 border-purple-500 shadow-lg'
@@ -69,8 +69,6 @@ const store = useWorkflowStore();
 const { findNode, edges } = useVueFlow();
 
 const sourceNodes = computed(() => {
-  console.log('dddd',edges.value);
-  
   return edges.value
     .filter((edge) => edge.target === props.id)
     .map((edge) => findNode(edge.source))

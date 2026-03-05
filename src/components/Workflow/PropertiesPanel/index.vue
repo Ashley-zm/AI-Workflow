@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-white">
+  <div class="h-[90vh] flex flex-col bg-white rounded-lg">
     <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
       <h3 class="font-bold text-gray-800">{{ currentNode?.type }}配置</h3>
       <XIcon

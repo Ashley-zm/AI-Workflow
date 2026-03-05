@@ -11,7 +11,7 @@
   />
 
   <!-- 自定义边标签渲染器，用于渲染自定义边标签 -->
-  <EdgeLabelRenderer v-if="labelVisible">
+  <EdgeLabelRenderer >
     <div
       :style="{
         pointerEvents: 'all',
@@ -24,49 +24,22 @@
   </EdgeLabelRenderer>
 </template>
 
-<script setup>
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, useVueFlow } from '@vue-flow/core'
+<script setup lang="ts">
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, useVueFlow, Position } from '@vue-flow/core'
 import { ref, computed } from 'vue'
 import { X } from 'lucide-vue-next'
 
-const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
-  sourceX: {
-    type: Number,
-    required: true,
-  },
-  sourceY: {
-    type: Number,
-    required: true,
-  },
-  targetX: {
-    type: Number,
-    required: true,
-  },
-  targetY: {
-    type: Number,
-    required: true,
-  },
-  sourcePosition: {
-    type: String,
-    required: true,
-  },
-  targetPosition: {
-    type: String,
-    required: true,
-  },
-  markerEnd: {
-    type: String,
-    required: false,
-  },
-  style: {
-    type: Object,
-    required: false,
-  },
-})
+const props = defineProps<{
+  id: string
+  sourceX: number
+  sourceY: number
+  targetX: number
+  targetY: number
+  sourcePosition: Position
+  targetPosition: Position
+  markerEnd?: string
+  style?: any
+}>()
 
 const { removeEdges } = useVueFlow()
 
