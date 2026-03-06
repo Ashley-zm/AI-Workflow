@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import type { Node, Edge } from '@vue-flow/core'
 import { useHistoryStore } from './history'
 import { MarkerType } from '@vue-flow/core'
-
 export const useWorkflowStore = defineStore('workflow', () => {
   const historyStore = useHistoryStore()
 
@@ -39,7 +38,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       type: 'outputs',
       position: { x: 100, y: 500 },
       data: { label: 'outputs' },
-    }
+    },
   ])
   // 边
   const edges = ref<Edge[]>([
@@ -70,7 +69,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
       style: {
         stroke: '#555',
       },
-    },{
+    },
+    {
       id: 'edge3',
       source: 'object_detection_model',
       target: 'object_detection_model1',
@@ -83,8 +83,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       style: {
         stroke: '#555',
       },
-      
-    }
+    },
   ])
   const selectedNode = ref<Node | null>(null)
 
@@ -115,19 +114,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 添加边
   const addEdge = (edge: Edge) => {
-    const newEdge = {
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#5e5e5eff',
-      },
-      style: {
-        stroke: '#5e5e5eff',
-      },
-      ...edge,
-    }
-    edges.value.push(newEdge)
+    edges.value.push(edge)
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'add_edge')
   }

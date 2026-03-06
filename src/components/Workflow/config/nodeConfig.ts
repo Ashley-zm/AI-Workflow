@@ -18,6 +18,7 @@ export const getTextColor = (color: string) => {
     teal: 'text-teal-600',
     amber: 'text-amber-600',
     yellow: 'text-yellow-600',
+    gray: 'text-gray-600',
   }
   return colorMap[color] || 'text-blue-600'
 }
@@ -53,6 +54,7 @@ export const getHoverClasses = (color: string) => {
     teal: 'hover:bg-teal-50 hover:border-teal-500',
     amber: 'hover:bg-amber-50 hover:border-amber-500',
     yellow: 'hover:bg-yellow-50 hover:border-yellow-500',
+    gray: 'hover:bg-gray-50 hover:border-gray-500',
   }
   return colorMap[color] || 'hover:bg-blue-50 hover:border-blue-500'
 }
@@ -70,6 +72,7 @@ export const getIconClasses = (color: string) => {
     teal: 'bg-teal-100 group-hover:bg-teal-200',
     amber: 'bg-amber-100 group-hover:bg-amber-200',
     yellow: 'bg-yellow-100 group-hover:bg-yellow-200',
+    gray: 'bg-gray-100 group-hover:bg-gray-200',
   }
   return colorMap[color] || 'bg-blue-100 group-hover:bg-blue-200'
 }
@@ -87,6 +90,7 @@ export const getChildHoverClasses = (color: string) => {
     teal: 'hover:border-teal-500 hover:bg-teal-50',
     amber: 'hover:border-amber-500 hover:bg-amber-50',
     yellow: 'hover:border-yellow-500 hover:bg-yellow-50',
+    gray: 'hover:border-gray-500 hover:bg-gray-50',
   }
   return colorMap[color] || 'hover:border-blue-500 hover:bg-blue-50'
 }
@@ -104,6 +108,7 @@ export const getChildIconClasses = (color: string) => {
     teal: 'bg-teal-100 group-hover:bg-teal-300',
     amber: 'bg-amber-100 group-hover:bg-amber-300',
     yellow: 'bg-yellow-100 group-hover:bg-yellow-300',
+    gray: 'bg-gray-100 group-hover:bg-gray-300',
   }
   return colorMap[color] || 'bg-blue-100 group-hover:bg-blue-300'
 }

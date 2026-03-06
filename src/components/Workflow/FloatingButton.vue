@@ -18,7 +18,7 @@
       v-if="isOpen"
       class="absolute top-16 left-0 bg-white w-80 max-h-96 shadow-2xl rounded-xl overflow-hidden"
     >
-      <Sidebar @closeBar="closeComponentLibrary"  @dragStart="onDragStart" />
+      <AllNodeSelectors @closeBar="closeComponentLibrary" @dragStart="onDragStart" />
     </div>
   </div>
 </template>
@@ -26,15 +26,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
-import { nodeTypesList } from '@/components/Workflow/Nodes/nodeTypes'
-import {
-  getIconComponent,
-  getTextColor,
-  getHoverTextColor,
-  getChildHoverClasses,
-  getChildIconClasses,
-} from '@/components/Workflow/Nodes/nodeConfig'
-import Sidebar from './Sidebar.vue'
+import AllNodeSelectors from './Nodes/AllNodeSelectors.vue'
 
 // 定义事件
 const emit = defineEmits<{
@@ -60,12 +52,6 @@ const closeComponentLibrary = () => {
 const onDragStart = (event: DragEvent, item: any) => {
   console.log('拖拽开始1:', item.type)
   emit('dragStart', event, item.type)
-}
-
-// 选择组件
-const selectComponent = (component: any) => {
-  emit('selectComponent', component.type, null)
-  closeComponentLibrary()
 }
 </script>
 

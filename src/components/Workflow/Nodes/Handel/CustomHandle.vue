@@ -5,10 +5,16 @@
     <Handle
       :type="type"
       :position="position"
+      class="!w-3 !h-3"
       :class="handleClasses"
       @click="handleClick"
       @mouseenter="isHovered = true"
       @mouseleave="isHovered = false"
+      :style="{
+        backgroundColor: '#fff',
+        borderColor: '#c5c5c5',
+        cursor: props.type === 'source' ? 'crosshair' : 'grab',
+      }"
     />
 
     <!-- 悬浮提示 -->
@@ -40,15 +46,14 @@ const emit = defineEmits<{
 const isHovered = ref(false)
 
 const handleClasses = computed(() => {
-  const baseClasses =
-    '!w-3 !h-3 border-2 border-white cursor-pointer transition-all duration-200 hover:scale-110'
-  const colorClass =
-    props.type === 'source' && props.color ? `!bg-${props.color}-600` : '!bg-gray-300'
-  return `${baseClasses} ${colorClass}`
+  return props.type === 'source' ? 'transition-all duration-200 hover:scale-110' : ''
 })
 
 const handleClick = (event: MouseEvent) => {
   console.log('CustomHandle点击事件:', props.nodeId, props.type)
+  if (props.type === 'target') {
+    return
+  }
   event.stopPropagation()
   emit('handleClick', event, props.type, props.nodeId)
 }

@@ -92,7 +92,7 @@
 <script setup lang="ts">
 import { computed, watch, ref, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
-import CustomHandle from './CustomHandle.vue'
+import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { TriangleAlert, Trash } from 'lucide-vue-next'
 import {
@@ -100,8 +100,8 @@ import {
   getTextColor,
   getChildIconClasses,
   getHoverClasses,
-} from '@/components/Workflow/Nodes/nodeConfig'
-import { getNodeType } from './nodeTypes'
+} from '@/components/Workflow/config/nodeConfig'
+import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()
 const props = defineProps<{

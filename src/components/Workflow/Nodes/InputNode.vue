@@ -38,7 +38,7 @@
           <div
             v-for="(property, index) in properties"
             :key="index"
-            class="flex items-center justify-between p-1 bg-gray-50 rounded text-xs"
+            class="flex items-center justify-between p-1 bg-gray-50 rounded text-xs cursor-pointer"
           >
             <div class="flex items-center gap-2">
               <Image v-if="property.type === 'image'" class="text-gray-500" :size="15" />
@@ -51,6 +51,7 @@
             <Delete
               class="text-red-400 hover:text-red-700 inline-block"
               :size="14"
+              :title="'删除属性'"
               @click="removeProperty(index)"
             />
           </div>
@@ -61,7 +62,7 @@
         class="w-full p-2 border-1 border-gray-300 rounded-md text-center cursor-pointer text-gray-600 text-xs hover:bg-gray-50"
         v-if="!properties || properties.length === 0"
       >
-        <Plus class="inline-block mr-1" :size="14" />
+        <Plus class="inline-block mr-1" :size="14" @click="addProperty" />
         添加输入
       </div>
     </div>
@@ -82,7 +83,7 @@
 
 <script setup lang="ts">
 import { Position } from '@vue-flow/core'
-import CustomHandle from './CustomHandle.vue'
+import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import {
   ArrowUpFromLine,
   TriangleAlert,
@@ -138,6 +139,16 @@ const removeProperty = (index: number) => {
   updateNodeData()
   // 检查属性是否存在空名称
   updateIsShowTip()
+}
+
+const addProperty = () => {
+  properties.value.push({
+    name: '',
+    type: 'parameter',
+    valueType: 'string',
+    defaultValue: '',
+  })
+  updateNodeData()
 }
 
 // 更新节点数据（将属性数据保存到节点的 data 中）

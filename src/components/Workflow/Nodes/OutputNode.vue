@@ -7,9 +7,7 @@
         : 'border-l-4 border-purple-500 border-t-1 border-b-1 border-r-1 border-gray-200',
     ]"
   >
-    <div
-      class="flex items-center justify-between p-2 rounded-t-xl border-b border-gray-100"
-    >
+    <div class="flex items-center justify-between p-2 rounded-t-xl border-b border-gray-100">
       <div class="flex items-center gap-2">
         <div
           class="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-50 text-purple-600"
@@ -17,11 +15,9 @@
           <FileOutput :size="18" />
         </div>
         <div>
-          <div class="text-[10px] rounded-full uppercase font-bold text-purple-600">
-            Output
-          </div>
+          <div class="text-[10px] rounded-full uppercase font-bold text-purple-600">Output</div>
           <div class="text-[10px] text-gray-700">
-            {{ data.label || "结果输出" }}
+            {{ data.label || '结果输出' }}
           </div>
         </div>
       </div>
@@ -53,27 +49,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { Position, useVueFlow } from "@vue-flow/core";
-import CustomHandle from "./CustomHandle.vue";
-import { useWorkflowStore } from "@/stores/workflow";
-import { FileOutput, Trash } from "lucide-vue-next";
+import { computed } from 'vue'
+import { Position, useVueFlow } from '@vue-flow/core'
+import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
+import { useWorkflowStore } from '@/stores/workflow'
+import { FileOutput, Trash } from 'lucide-vue-next'
 
 const props = defineProps<{
-  id: string;
-  data: any;
-  selected?: boolean;
-}>();
+  id: string
+  data: any
+  selected?: boolean
+}>()
 
-const store = useWorkflowStore();
-const { findNode, edges } = useVueFlow();
+const store = useWorkflowStore()
+const { findNode, edges } = useVueFlow()
 
 const sourceNodes = computed(() => {
   return edges.value
     .filter((edge) => edge.target === props.id)
     .map((edge) => findNode(edge.source))
-    .filter((node) => node !== undefined);
-});
+    .filter((node) => node !== undefined)
+})
 
 // const deleteNode = () => {
 //   store.removeNode(props.id);
