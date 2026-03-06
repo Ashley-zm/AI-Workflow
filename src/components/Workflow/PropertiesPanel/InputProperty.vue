@@ -113,7 +113,7 @@ import { Plus, Delete, Picture } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps<{
-  id: string
+  nodeId: string
 }>()
 
 const emit = defineEmits<{
@@ -135,7 +135,7 @@ const properties = ref<Property[]>([])
 
 // 获取节点数据
 const getNodeData = () => {
-  const node = store.nodes.find((n) => n.id === props.id)
+  const node = store.nodes.find((n) => n.id === props.nodeId)
   return node?.data || {}
 }
 
@@ -240,7 +240,7 @@ const handlePropertyNameInput = (property: Property, index: number) => {
     // 强制更新UI并同步到节点数据
     properties.value[index] = { ...property }
     // 立即更新节点数据
-    store.updateNode(props.id, { properties: JSON.parse(JSON.stringify(properties.value)) })
+    store.updateNode(props.nodeId, { properties: JSON.parse(JSON.stringify(properties.value)) })
     emit('updateProperties', properties.value)
     // 强制触发重新渲染
     properties.value = [...properties.value]
@@ -268,7 +268,7 @@ const updateProperties = () => {
   }
 
   // 更新节点数据
-  store.updateNode(props.id, { properties: JSON.parse(JSON.stringify(properties.value)) })
+  store.updateNode(props.nodeId, { properties: JSON.parse(JSON.stringify(properties.value)) })
   // 触发事件通知父组件
   emit('updateProperties', properties.value)
 }
@@ -300,7 +300,7 @@ onMounted(() => {
 
 // 监听节点选择变化，重新初始化数据
 watch(
-  () => props.id,
+  () => props.nodeId,
   () => {
     initializeProperties()
   },

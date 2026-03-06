@@ -4,11 +4,14 @@ import InputNode from './InputNode.vue'
 import type { NodeTypesObject } from '@vue-flow/core'
 import ClassificationModelNode from './ClassificationModelNode.vue'
 import SegmentationModelNode from './SegmentationModelNode.vue'
+import OutputNode from './OutputNode.vue'
+
 export const nodeTypes = {
   inputs: markRaw(InputNode),
   object_detection_model: markRaw(ObjectDetectionModelNode),
   classification_model: markRaw(ClassificationModelNode),
   segmentation_model: markRaw(SegmentationModelNode),
+  outputs: markRaw(OutputNode),
 } as NodeTypesObject
 
 export const nodeTypesList = [

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-white">
+  <div class="h-[90vh] flex flex-col bg-white rounded-lg">
     <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
       <h3 class="font-bold text-gray-800">{{ currentNode?.type }}配置</h3>
       <XIcon
@@ -29,8 +29,11 @@
           @update:model-value="updateNodeConfig"
         />
       </template>
-      <template v-else-if="currentNode.type === 'inputs'">
-        <InputProperty :id="currentNode.id" @updateProperties="updateInputProperties" />
+      <template v-if="currentNode.type === 'inputs'">
+        <InputProperty :nodeId="currentNode.id" @updateProperties="updateInputProperties" />
+      </template>
+      <template v-if="currentNode.type === 'outputs'">
+        <OutputProperty :nodeId="currentNode.id" />
       </template>
     </div>
   </div>
@@ -42,6 +45,7 @@ import { XIcon } from 'lucide-vue-next'
 import { useWorkflowStore } from '@/stores/workflow'
 import ObjectDetectionModeProperty from './ObjectDetectionModeProperty.vue'
 import InputProperty from './InputProperty.vue'
+import OutputProperty from './OutputProperty.vue'
 
 const store = useWorkflowStore()
 

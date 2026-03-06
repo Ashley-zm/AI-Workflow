@@ -28,11 +28,23 @@ export const useWorkflowStore = defineStore('workflow', () => {
       position: { x: 50, y: 300 },
       data: { label: 'Object_Detction_Model' },
     },
+    {
+      id: 'object_detection_model1',
+      type: 'object_detection_model',
+      position: { x: 350, y: 300 },
+      data: { label: 'Object_Detction_Model' },
+    },
+    {
+      id: 'outputs',
+      type: 'outputs',
+      position: { x: 100, y: 500 },
+      data: { label: 'outputs' },
+    }
   ])
   // 边
   const edges = ref<Edge[]>([
     {
-      id: 'edge-1-2',
+      id: 'edge1',
       source: 'inputs',
       target: 'object_detection_model',
       animated: true,
@@ -45,6 +57,34 @@ export const useWorkflowStore = defineStore('workflow', () => {
         stroke: '#555',
       },
     },
+    {
+      id: 'edge2',
+      source: 'object_detection_model',
+      target: 'outputs',
+      animated: true,
+      type: 'button',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#555',
+      },
+      style: {
+        stroke: '#555',
+      },
+    },{
+      id: 'edge3',
+      source: 'object_detection_model',
+      target: 'object_detection_model1',
+      animated: true,
+      type: 'button',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#555',
+      },
+      style: {
+        stroke: '#555',
+      },
+      
+    }
   ])
   const selectedNode = ref<Node | null>(null)
 

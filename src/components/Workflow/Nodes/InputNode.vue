@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group relative w-[280px] bg-white rounded-xl border-1 border-gray-300 transition-all hover:shadow-lg"
+    class="group relative w-[260px] bg-white rounded-xl border-1 border-gray-200 transition-all hover:shadow-lg"
     :class="{ '!border-gray-400 shadow-gray-100': selected }"
   >
     <div
@@ -12,7 +12,7 @@
         >
           <ArrowUpFromLine :size="14" />
         </div>
-        <div class="flex flex-col min-w-[200px]">
+        <div class="flex flex-col min-w-[180px]">
           <span class="text-sm font-semibold text-gray-600">Inputs </span>
           <p class="text-xs font-thin text-gray-600">工作流程运行所需的数据</p>
         </div>

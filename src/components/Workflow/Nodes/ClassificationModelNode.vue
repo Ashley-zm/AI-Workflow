@@ -8,7 +8,7 @@
       <Trash :size="14" />
     </div>
     <div
-      class="group relative min-w-[260px] bg-white rounded-xl hover:shadow-lg"
+      class="group relative w-[260px] bg-white rounded-xl hover:shadow-lg"
       :class="[
         selected
           ? `border-l-4 border-y-1  border-r-1 ${getTextColor(nodeColor)} shadow-lg `
