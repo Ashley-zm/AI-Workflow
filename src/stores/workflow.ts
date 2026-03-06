@@ -75,7 +75,19 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 添加边
   const addEdge = (edge: Edge) => {
-    edges.value.push(edge)
+    const newEdge = {
+      animated: true,
+      type: 'button',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#5e5e5eff',
+      },
+      style: {
+        stroke: '#5e5e5eff',
+      },
+      ...edge,
+    }
+    edges.value.push(newEdge)
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'add_edge')
   }

@@ -16,6 +16,22 @@
         :min-zoom="0.2"
         :max-zoom="4"
       >
+        <!-- 自定义边渲染器，用于渲染自定义边 -->
+        <template #edge-custom="customEdgeProps">
+          <CustomEdge
+            :id="customEdgeProps.id"
+            :source-x="customEdgeProps.sourceX"
+            :source-y="customEdgeProps.sourceY"
+            :target-x="customEdgeProps.targetX"
+            :target-y="customEdgeProps.targetY"
+            :source-position="customEdgeProps.sourcePosition"
+            :target-position="customEdgeProps.targetPosition"
+            :data="customEdgeProps.data"
+            :marker-end="customEdgeProps.markerEnd"
+            :style="customEdgeProps.style"
+          />
+        </template>
+        <!-- 自定义边按钮渲染器，用于渲染自定义边按钮 -->
         <template #edge-button="buttonEdgeProps">
           <EdgeWithButton
             :id="buttonEdgeProps.id"
@@ -27,6 +43,15 @@
             :target-position="buttonEdgeProps.targetPosition"
             :marker-end="buttonEdgeProps.markerEnd"
             :style="buttonEdgeProps.style"
+          />
+        </template>
+        <!-- 自定义连接线渲染器，用于渲染自定义连接线 -->
+        <template #connection-line="{ sourceX, sourceY, targetX, targetY }">
+          <CustomConnectionLine
+            :source-x="sourceX"
+            :source-y="sourceY"
+            :target-x="targetX"
+            :target-y="targetY"
           />
         </template>
         <Background pattern-color="#999" :gap="24" :size="1.5" />
@@ -71,9 +96,10 @@ import { RefreshCcw, Undo2, Redo2 } from 'lucide-vue-next'
 import { nodeTypes, getNodeType } from '@/components/Workflow/Nodes/nodeTypes'
 import { onMounted, onUnmounted, ref, computed, markRaw } from 'vue'
 // import DemoControls from '@/components/Workflow/DemoControls.vue'
+import EdgeWithButton from '@/components/Workflow/Edges/EdgeWithButton.vue'
+import CustomEdge from '@/components/Workflow/Edges/CustomEdge.vue'
+import CustomConnectionLine from '@/components/Workflow/Edges/CustomConnectionLine.vue'
 import ComponentLibraryModal from '@/components/Workflow/ComponentLibraryModal.vue'
-import EdgeWithButton from '@/components/Workflow/EdgeWithButton.vue'
-import { MarkerType } from '@vue-flow/core'
 
 const store = useWorkflowStore()
 const { onInit, project, onConnect, addNodes, addEdges } = useVueFlow()
@@ -145,15 +171,6 @@ onConnect((connection) => {
     target: connection.target,
     sourceHandle: connection.sourceHandle,
     targetHandle: connection.targetHandle,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#555',
-    },
-    style: {
-      stroke: '#555',
-    },
-    animated: true,
-    type: 'button',
   }
   store.addEdge(edge)
 })
@@ -355,15 +372,6 @@ const handleComponentSelect = (componentType: string, handleInfo: any) => {
       target: newNode.id,
       sourceHandle: null,
       targetHandle: null,
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#5e5e5eff',
-      },
-      style: {
-        stroke: '#5e5e5eff',
-      },
     }
     console.log('创建连接边:', edge)
     addEdges([edge])
@@ -376,15 +384,6 @@ const handleComponentSelect = (componentType: string, handleInfo: any) => {
       target: nodeId,
       sourceHandle: null,
       targetHandle: null,
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#5e5e5eff',
-      },
-      style: {
-        stroke: '#5e5e5eff',
-      },
     }
     console.log('创建连接边:', edge)
     addEdges([edge])

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group relative w-[280px] bg-white rounded-xl border-1 border-gray-200 transition-all hover:shadow-lg"
+    class="group relative w-[280px] bg-white rounded-xl border-1 border-gray-300 transition-all hover:shadow-lg"
     :class="{ '!border-gray-400 shadow-gray-100': selected }"
   >
     <div
