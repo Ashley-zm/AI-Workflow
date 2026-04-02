@@ -1,5 +1,13 @@
 <template>
   <div class="flex h-screen w-full overflow-hidden bg-slate-50" @drop="onDrop" @dragover.prevent>
+    <button
+      type="button"
+      class="absolute min-w-[200px] top-4 left-5 z-50 flex items-center gap-2 bg-white px-4 py-3 rounded-md border-b border-gray-200 cursor-pointer shadow-md"
+      @click="handleBackClick"
+    >
+      <ChevronLeft :size="18" class="text-blue-500" />
+      <span class="font-medium text-slate-600 hover:text-blue-500">{{ backButtonText }}</span>
+    </button>
     <div class="flex-1 h-full relative">
       <VueFlow
         class="basic-flow bg-white"
@@ -60,6 +68,52 @@
         <MiniMap v-if="showMinimap" class="mini-map" :pannable="true" :zoomable="true" />
       </VueFlow>
 
+      <!-- 工作流工具栏（右上角） -->
+      <WorkflowToolbar
+        @save="handleSave"
+        @export="handleExport"
+        @import="handleImport"
+        @health-check="handleHealthCheck"
+        @clear-canvas="handleClearCanvas"
+        @debug="handleDebug"
+        @open-settings="handleOpenSettings"
+        @open-help="handleOpenHelp"
+        @toggle-history="toggleHistory"
+      />
+
+      <!-- 调试信息面板组件 -->
+      <WorkflowDebugPanel
+        v-if="isDebugVisible"
+        class="absolute right-4 top-16 z-20"
+        :nodes="store.nodes"
+        :edges="store.edges"
+        :selected-node="store.selectedNode"
+        :history-length="store.historyStore.history.length"
+        @close="toggleDebug"
+        @start-debug="handleStartDebug"
+      />
+
+      <!-- 健康检查面板 -->
+      <WorkflowHealthPanel
+        v-if="isHealthCheckVisible"
+        ref="healthPanelRef"
+        class="absolute right-4 top-16 z-20"
+        :nodes="store.nodes"
+        :edges="store.edges"
+        @close="toggleHealthCheck"
+        @recheck="handleRecheck"
+      />
+
+      <!-- 历史操作记录面板 -->
+      <WorkflowHistoryPanel
+        v-if="isHistoryVisible"
+        class="absolute right-4 top-16 z-20"
+        :history="store.historyStore.history"
+        :current-index="store.historyStore.currentIndex"
+        @close="toggleHistory"
+        @select-history="handleSelectHistory"
+      />
+
       <!-- 控制按钮栏 -->
       <ControlBar
         :can-undo="store.canUndo"
@@ -82,7 +136,7 @@
 
     <div
       v-if="store.selectedNode"
-      class="w-96 rounded-lg border-l border-gray-200 shadow-2xl absolute right-0 top-10 z-10"
+      class="w-96 rounded-lg border-l border-gray-200 shadow-2xl absolute right-0 top-20 z-10"
     >
       <PropertiesPanel />
     </div>
@@ -97,6 +151,7 @@
 
 <script setup lang="ts">
 import '@vue-flow/controls/dist/style.css'
+import { ChevronLeft } from 'lucide-vue-next'
 import { VueFlow, useVueFlow, type NodeMouseEvent, type NodeTypesObject } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
@@ -104,7 +159,10 @@ import { useWorkflowStore } from '@/stores/workflow'
 import PropertiesPanel from '@/components/Workflow/PropertiesPanel/index.vue'
 import FloatingButton from '@/components/Workflow/FloatingButton.vue'
 import ControlBar from '@/components/Workflow/Control/ControlBar.vue'
-import { nodeTypes, getNodeType } from '@/components/Workflow/config/nodeTypes'
+import WorkflowToolbar from '@/components/Workflow/Control/WorkflowToolbar.vue'
+import WorkflowHealthPanel from '@/components/Workflow/Control/WorkflowHealthPanel.vue'
+import WorkflowHistoryPanel from '@/components/Workflow/Control/WorkflowHistoryPanel.vue'
+import { allNodeTypes, getNodeType } from '@/components/Workflow/config/nodeTypes'
 import { onMounted, onUnmounted, ref, computed, markRaw } from 'vue'
 // import HistoryControl from '@/components/Workflow/HistoryControl.vue'
 import EdgeWithButton from '@/components/Workflow/Edges/EdgeWithButton.vue'
@@ -112,13 +170,100 @@ import CustomEdge from '@/components/Workflow/Edges/CustomEdge.vue'
 import CustomConnectionLine from '@/components/Workflow/Edges/CustomConnectionLine.vue'
 import ComponentLibraryModal from '@/components/Workflow/ComponentLibraryModal.vue'
 import { getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
+import WorkflowDebugPanel from '@/components/Workflow/Debug/WorkflowDebugPanel.vue'
+import { useRouter } from 'vue-router'
 
 const store = useWorkflowStore()
+const router = useRouter()
 const { onInit, project, onConnect, addNodes, addEdges, viewport, fitView } = useVueFlow()
+
+const backButtonText = '\u8fd4\u56de\u5de5\u4f5c\u6d41\u7ba1\u7406'
+
+const handleBackClick = async () => {
+  if (window.history.length > 1) {
+    await router.back()
+    return
+  }
+  await router.push({ name: 'workflow-manage' })
+}
 
 // 状态变量
 const isLocked = ref(false)
-const showMinimap = ref(false)
+const showMinimap = ref(true)
+const isDebugVisible = ref(false)
+const isHealthCheckVisible = ref(false)
+const isHistoryVisible = ref(false)
+const healthPanelRef = ref<InstanceType<typeof WorkflowHealthPanel> | null>(null)
+
+const toggleDebug = () => {
+  isDebugVisible.value = !isDebugVisible.value
+}
+
+const toggleHealthCheck = () => {
+  isHealthCheckVisible.value = !isHealthCheckVisible.value
+  if (isHealthCheckVisible.value && healthPanelRef.value) {
+    healthPanelRef.value.performHealthCheck()
+  }
+}
+
+const toggleHistory = () => {
+  isHistoryVisible.value = !isHistoryVisible.value
+}
+
+// 工作流工具栏处理函数
+const handleSave = () => {
+  console.log('保存工作流')
+}
+
+const handleExport = () => {
+  console.log('导出工作流')
+}
+
+const handleImport = () => {
+  console.log('导入工作流')
+}
+
+const handleHealthCheck = () => {
+  isHealthCheckVisible.value = true
+  setTimeout(() => {
+    if (healthPanelRef.value) {
+      healthPanelRef.value.performHealthCheck()
+    }
+  }, 100)
+}
+
+const handleRecheck = () => {
+  if (healthPanelRef.value) {
+    healthPanelRef.value.performHealthCheck()
+  }
+}
+
+const handleClearCanvas = () => {
+  console.log('清空画布')
+}
+
+const handleDebug = () => {
+  console.log('调试工作流')
+  toggleDebug()
+}
+
+const handleOpenSettings = () => {
+  console.log('打开设置')
+}
+
+const handleOpenHelp = () => {
+  console.log('打开帮助')
+}
+
+const handleSelectHistory = (index: number) => {
+  console.log('选择历史记录:', index)
+  const state = store.historyStore.history[index]?.state
+  if (state) {
+    store.nodes = state.nodes
+    store.edges = state.edges
+    store.historyStore.currentIndex = index
+  }
+}
 
 // 放大/缩小/适合视图函数
 const handleZoomIn = () => {
@@ -159,8 +304,8 @@ const currentHandleInfo = ref<{
 const nodeTypesWithEvents = computed(() => {
   const enhancedNodeTypes: any = {}
 
-  Object.keys(nodeTypes).forEach((key) => {
-    const nodeType: any = nodeTypes[key]
+  Object.keys(allNodeTypes).forEach((key) => {
+    const nodeType: any = allNodeTypes[key]
     enhancedNodeTypes[key] = markRaw({
       ...nodeType,
       inheritAttrs: false,
@@ -291,8 +436,8 @@ const autoLayout = () => {
   console.log('节点数量:', nodes.length, '边数量:', edges.length)
 
   // 设置布局参数
-  const verticalSpacing = 180 // 节点之间的垂直间距
-  const horizontalSpacing = 300 // 节点之间的水平间距
+  const verticalSpacing = 250 // 节点之间的垂直间距（增加以避免遮挡）
+  const horizontalSpacing = 350 // 节点之间的水平间距（节点宽度280px + 70px间距）
   // 屏幕宽度的中间
   const startX = window.innerWidth / 4 // 起始X坐标（居中）
   console.log('起始X坐标:', window.innerWidth, startX)
@@ -519,6 +664,18 @@ const handleRedoClick = () => {
   store.redo()
 }
 
+// 开始调试（从调试面板触发）
+const handleStartDebug = (payload: {
+  inputValues: Record<string, any>
+  nodes: any[]
+  edges: any[]
+}) => {
+  console.log('开始调试，输入数据：', payload.inputValues)
+  console.log('当前节点：', payload.nodes)
+  console.log('当前边：', payload.edges)
+  // 这里可以对接实际推理 / 执行逻辑，例如调用后端 API 触发一次 workflow 运行
+}
+
 // Handle点击事件处理
 const handleHandleClick = (event: MouseEvent, handleType: 'source' | 'target', nodeId: string) => {
   console.log('Handle被点击:', {
@@ -639,7 +796,7 @@ const handleComponentSelect = (componentType: string, handleInfo: any) => {
 /* 迷你地图样式 */
 .mini-map {
   position: absolute !important;
-  bottom: 70px !important;
+  /* bottom: 70px !important; */
   right: 10px !important;
   width: 200px !important;
   height: 150px !important;

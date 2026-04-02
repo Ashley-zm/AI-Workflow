@@ -4,13 +4,9 @@
       <div class="flex items-center justify-center gap-2">
         <div
           class="w-10 h-10 rounded-lg flex items-center justify-center"
-          :class="getChildIconClasses(nodeColor)"
+          :class="`bg-${nodeColor}-50 text-${nodeColor}-600`"
         >
-          <component
-            :size="18"
-            :class="getTextColor(nodeColor)"
-            :is="getIconComponent(nodeType?.icon || 'BotIcon')"
-          />
+          <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
         </div>
         <h3 class="font-bold text-gray-800">{{ currentNode?.type }}配置</h3>
       </div>
@@ -29,42 +25,46 @@
         ID: {{ currentNode.id }}
       </div>
 
-      <template
-        v-if="
-          currentNode.type === 'object_detection_model' ||
-          currentNode.type === 'classification_model' ||
-          currentNode.type === 'segmentation_model'
-        "
-      >
-        <ObjectDetectionModeProperty
-          v-model="currentNode.data.config"
-          @update:model-value="updateNodeConfig"
-        />
-      </template>
-      <template v-if="currentNode.type === 'inputs'">
-        <InputProperty :nodeId="currentNode.id" @updateProperties="updateInputProperties" />
-      </template>
-      <template v-if="currentNode.type === 'outputs'">
-        <OutputProperty :nodeId="currentNode.id" />
-      </template>
+      <component
+        :is="currentPropertyComponent"
+        v-if="currentNode.id"
+        v-model="currentNode.data.config"
+        :nodeId="currentNode.id"
+        @update:nodeConfig="updateNodeConfig"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, markRaw } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useWorkflowStore } from '@/stores/workflow'
 import ObjectDetectionModeProperty from './Model/ObjectDetectionModeProperty.vue'
+import BoundingBoxVisualizationProperty from './Visualization/BoundingBoxVisualizationProperty.vue'
+import PolygonVisualizationProperty from './Visualization/PolygonVisualizationProperty.vue'
+import LabelVisualizationProperty from './Visualization/LabelVisualizationProperty.vue'
+import IfElseProperty from './Conditional/IfElseProperty.vue'
+
 import InputProperty from './InputProperty.vue'
 import OutputProperty from './OutputProperty.vue'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
-import {
-  getIconComponent,
-  getTextColor,
-  getChildIconClasses,
-} from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 const store = useWorkflowStore()
+
+// 组件映射表
+const propertyComponents = {
+  detection_model: markRaw(ObjectDetectionModeProperty),
+  classification_model: markRaw(ObjectDetectionModeProperty),
+  segmentation_model: markRaw(ObjectDetectionModeProperty),
+  inputs: markRaw(InputProperty),
+  outputs: markRaw(OutputProperty),
+  bounding_box: markRaw(BoundingBoxVisualizationProperty),
+  polygon_visualization: markRaw(PolygonVisualizationProperty),
+  label_visualization: markRaw(LabelVisualizationProperty),
+  if_else: markRaw(IfElseProperty),
+  switch_case: markRaw(IfElseProperty),
+}
 
 // 使用 computed 获取当前选中的节点，保证响应性
 const currentNode = computed(() => store.selectedNode)
@@ -73,33 +73,17 @@ const nodeType = computed(() =>
 )
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
 
-// 初始化 config 对象，防止读取未定义属性报错
-// 在实际项目中，这应该在添加节点时在 store 中完成初始化
-if (currentNode.value && !currentNode.value.data.config) {
-  if (currentNode.value.type === 'object_detection_model') {
-    currentNode.value.data.config = {
-      imagePath: '',
-      model: '',
-      modelInfo: null,
-    }
-  } else {
-    currentNode.value.data.config = { prompt: '', model: 'gpt-3.5-turbo' }
-  }
-}
+// 根据当前节点类型计算对应的属性组件
+const currentPropertyComponent = computed(() => {
+  if (!currentNode.value) return null
+  return propertyComponents[currentNode.value.type as keyof typeof propertyComponents] || null
+})
 
 // 更新节点配置的方法
-const updateNodeConfig = (newConfig: { model: string; prompt: string }) => {
+const updateNodeConfig = (newConfig: any) => {
   if (currentNode.value) {
     // 使用 store 的 updateNode 方法，这样会自动记录历史
-    store.updateNode(currentNode.value.id, { config: newConfig })
-  }
-}
-
-// 更新输入节点属性的方法
-const updateInputProperties = (properties: any[]) => {
-  if (currentNode.value) {
-    // 使用 store 的 updateNode 方法，这样会自动记录历史
-    store.updateNode(currentNode.value.id, { properties: properties })
+    store.updateNode(currentNode.value.id, newConfig)
   }
 }
 </script>

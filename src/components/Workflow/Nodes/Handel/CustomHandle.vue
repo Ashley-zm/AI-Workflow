@@ -1,6 +1,6 @@
 <!-- 自定义节点的自定义处理句柄 -->
 <template>
-  <div :class="type === 'source' ? 'relative' : ''">
+  <div>
     <!-- 按住拖拽，鼠标松开监听，也可以进行添加节点 -->
     <Handle
       :type="type"
@@ -20,7 +20,7 @@
     <!-- 悬浮提示 -->
     <div
       v-if="isHovered && showTooltip && type === 'source'"
-      class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-10"
+      class="absolute right-[-38px] top-[50px] transform px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-10"
     >
       点击添加节点
     </div>

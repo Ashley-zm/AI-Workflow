@@ -1,6 +1,6 @@
 <!-- 所有节点选择器 -->
 <template>
-  <div class="min-w-[280px] border-r border-slate-200 flex flex-col shadow-lg">
+  <div class="min-w-[260px] border-r border-slate-200 flex flex-col shadow-lg">
     <!-- 顶部标题和返回按钮 -->
     <div class="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
       <div
@@ -30,21 +30,16 @@
           :key="index"
           @click="showChildren(item)"
           class="group cursor-pointer rounded-xl border border-slate-200 hover:shadow-lg"
-          :class="getHoverClasses(item.color)"
+          :class="`border-${item.color}-600 hover:border-${item.color}-500`"
         >
           <div class="rounded-xl p-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div
                   class="w-12 h-12 rounded-lg flex items-center justify-center"
-                  :class="getIconClasses(item.color)"
+                  :class="`bg-${item.color}-50 text-${item.color}-600`"
                 >
-                  <component
-                    v-if="item.icon"
-                    :size="18"
-                    :class="getTextColor(item.color)"
-                    :is="getIconComponent(item.icon)"
-                  />
+                  <component v-if="item.icon" :size="18" :is="getIconComponent(item.icon)" />
                 </div>
                 <div class="flex-1">
                   <div
@@ -82,19 +77,14 @@
           draggable="true"
           @dragstart="onDragStart($event, child)"
           class="group bg-white/90 rounded-xl p-3 border border-slate-200 cursor-grab active:cursor-grabbing hover:shadow-lg"
-          :class="getChildHoverClasses(child.color)"
+          :class="`border-${child.color}-600 hover:border-${child.color}-500`"
         >
           <div class="flex items-center gap-3">
             <div
               class="w-12 h-12 rounded-lg flex items-center justify-center"
-              :class="getChildIconClasses(child.color)"
+              :class="`bg-${child.color}-50 text-${child.color}-600`"
             >
-              <component
-                v-if="child.icon"
-                :size="20"
-                :class="getTextColor(child.color)"
-                :is="getIconComponent(child.icon)"
-              />
+              <component v-if="child.icon" :size="20" :is="getIconComponent(child.icon)" />
             </div>
             <div class="flex-1">
               <div
@@ -123,15 +113,7 @@ import { X } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { nodeTypesList } from '@/components/Workflow/config/nodeTypes'
 import { ChevronRight, ChevronLeft } from 'lucide-vue-next'
-import {
-  getIconComponent,
-  getHoverClasses,
-  getIconClasses,
-  getTextColor,
-  getHoverTextColor,
-  getChildHoverClasses,
-  getChildIconClasses,
-} from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent, getHoverTextColor } from '@/components/Workflow/config/nodeConfig'
 // 定义事件
 const emit = defineEmits<{
   dragStart: [event: DragEvent, type: string]

@@ -78,15 +78,6 @@ const { project, addNodes } = useVueFlow()
 const currentAction = ref('就绪')
 const showHistoryDetails = ref(false)
 
-// 检查初始状态
-console.log(
-  'DemoControls初始化 - 历史记录:',
-  historyStore.history.length,
-  '当前索引:',
-  historyStore.currentIndex,
-)
-console.log('canUndo:', store.canUndo, 'canRedo:', store.canRedo)
-
 // 监听历史记录变化
 watch(
   () => historyStore.currentIndex,

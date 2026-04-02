@@ -1,43 +1,33 @@
 <template>
   <div class="group relative pt-5">
     <div
-      class="hidden shadow-lg border border-red-100 group-hover:block absolute -top-2 right-2 bg-white text-red-400 p-1 rounded-md cursor-pointer hover:bg-red-200"
+      class="hidden shadow-lg border border-red-100 group-hover:block absolute -top-2 right-2 bg-white text-red-400 p-1.5 rounded-md cursor-pointer hover:bg-red-200 transition-colors"
       @click.stop="deleteNode"
       title="删除节点"
     >
       <Trash :size="14" />
     </div>
     <div
-      class="group relative w-[260px] bg-white rounded-xl hover:shadow-lg"
-      :class="[
-        selected
-          ? `border-l-4 border-y-1  border-r-1 ${getTextColor(nodeColor)} shadow-lg `
-          : `${getHoverClasses(nodeColor)} border-l-4 ${getTextColor(nodeColor)} border-t-1 border-b-1 border-t-gray-200 border-b-gray-200 border-r-1 border-r-gray-200`,
-        ,
-      ]"
+      class="group relative w-[260px] bg-white rounded-xl border hover:border-blue-600 shadow transition-all"
+      :class="[selected ? `border-1 border-blue-600 shadow-xl` : `border-1 border-gray-200`]"
     >
-      <div class="flex items-center justify-between p-2 rounded-t-xl border-b border-gray-100">
-        <div class="flex items-center gap-2">
+      <div class="flex items-center justify-between p-3 rounded-t-xl border-b border-gray-200">
+        <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
-            :class="getChildIconClasses(nodeColor)"
+            :class="`bg-${nodeColor}-100 text-${nodeColor}-600`"
           >
-            <component
-              :size="18"
-              :class="getTextColor(nodeColor)"
-              :is="getIconComponent(nodeType?.icon || 'BotIcon')"
-            />
+            <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
           </div>
-          <div>
-            <div class="text-[10px] rounded-full uppercase font-bold">
+          <div class="flex flex-col">
+            <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
               {{ nodeType?.name || 'Model' }}
             </div>
-            <div class="text-[10px] text-gray-700">
+            <div class="text-[11px] text-gray-700 tracking-[1px]">
               {{ nodeType?.description || 'Model 节点' }}
             </div>
           </div>
         </div>
-        <!-- 最右侧警告图标 -->
         <el-tooltip
           v-if="isShowTip"
           class="box-item"
@@ -45,41 +35,81 @@
           :content="TipContent"
           placement="top"
         >
-          <div class="text-red-400 bg-red-50 p-1 rounded-full">
-            <TriangleAlert :size="12" />
+          <div
+            class="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
+          >
+            <TriangleAlert :size="14" />
           </div>
         </el-tooltip>
-        <!-- <button
-          class="bg-red-100 text-red-700 p-0.5 rounded-md cursor-pointer hover:bg-red-200 transition border-none outline-none"
-          @click.stop="deleteNode"
-          title="删除节点"
-        >
-          <X :size="16" />
-        </button> -->
       </div>
 
-      <div class="px-4 py-2">
-        <div>
-          <label class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">图片：</label>
-          <span class="text-xs text-gray-600">{{ data.config?.imagePath || '请选择图片...' }}</span>
+      <div class="p-2 space-y-2">
+        <div class="flex items-center justify-between p-1.5 rounded-lg border border-slate-100">
+          <div class="flex items-center gap-2.5 flex-1 min-w-0">
+            <div
+              class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center bg-emerald-500"
+            >
+              <Image :size="14" class="text-white" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[10px] text-slate-400 tracking-[1px]">图片</div>
+              <div class="text-xs font-medium text-slate-600 truncate">
+                {{ properties?.imagePath || '请选择图片...' }}
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="properties?.imagePath"
+            class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
+          >
+            <CheckCircle :size="12" class="text-emerald-600" />
+          </div>
+          <div
+            v-else
+            class="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center"
+          >
+            <AlertCircle :size="12" class="text-amber-600" />
+          </div>
         </div>
-        <div>
-          <label class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">模型：</label>
-          <span class="text-xs text-gray-600">{{
-            data.config?.modelInfo?.name || '请选择模型...'
-          }}</span>
+
+        <div class="flex items-center justify-between p-1 rounded-lg border border-slate-100">
+          <div class="flex items-center gap-2.5 flex-1 min-w-0">
+            <div
+              class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center bg-blue-500"
+            >
+              <Brain :size="14" class="text-white" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[10px] text-slate-400 tracking-[1px]">模型</div>
+              <div class="text-xs font-medium text-slate-600 truncate">
+                {{ properties?.model_name || '请选择模型...' }}
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="properties?.model_name"
+            class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
+          >
+            <CheckCircle :size="12" class="text-emerald-600" />
+          </div>
+          <div
+            v-else
+            class="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center"
+          >
+            <AlertCircle :size="12" class="text-amber-600" />
+          </div>
         </div>
       </div>
 
       <CustomHandle
         type="target"
-        :position="Position.Top"
+        :position="Position.Left"
         :node-id="props.id"
         @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
       />
       <CustomHandle
         type="source"
-        :position="Position.Bottom"
+        :position="Position.Right"
         :node-id="props.id"
         :color="nodeColor"
         :show-tooltip="true"
@@ -94,25 +124,18 @@ import { computed, watch, ref, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
-import { TriangleAlert, Trash } from 'lucide-vue-next'
-import {
-  getIconComponent,
-  getTextColor,
-  getChildIconClasses,
-  getHoverClasses,
-} from '@/components/Workflow/config/nodeConfig'
+import { TriangleAlert, Trash, Image, Brain, CheckCircle, AlertCircle } from 'lucide-vue-next'
+import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
-  config: any
   data: any
   selected?: boolean
   type: string
 }>()
-
-// 从节点数据中获取handle点击事件处理器
+const properties = computed(() => props.data?.config?.[0] || {})
 const onHandleClick = computed(() => {
   return props.data?.onHandleClick as (
     event: MouseEvent,
@@ -120,37 +143,37 @@ const onHandleClick = computed(() => {
     nodeId: string,
   ) => void | undefined
 })
-// 获取节点类型配置
+
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
+
 const deleteNode = () => {
-  // 通过 store 删除节点，这样会自动记录历史
   store.removeNode(props.id)
   store.setSelectedNode(null)
 }
-// 初始化属性数据
+
 const initializeProperties = () => {
-  // 检查属性是否存在空名称
   updateIsShowTip()
 }
+
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  console.log('props.config', props)
-  if (!props.data?.config?.imagePath) {
+  if (!props.data?.config?.[0]?.imagePath) {
     TipContent.value = '请选择图片'
     isShowTip.value = true
-  } else if (!props.data?.config?.model) {
+  } else if (!props.data?.config?.[0]?.model_id) {
     TipContent.value = '请选择模型'
     isShowTip.value = true
   } else {
     isShowTip.value = false
   }
 }
+
 onMounted(() => {
   initializeProperties()
 })
-// 监听属性变化
+
 watch(
   () => props.data,
   () => {

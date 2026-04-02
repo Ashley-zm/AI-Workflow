@@ -26,19 +26,13 @@
               :key="childIndex"
               @click="selectComponent(child)"
               class="group bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
-              :class="getChildHoverClasses(child.color)"
             >
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 rounded-lg flex items-center justify-center"
-                  :class="getChildIconClasses(child.color)"
+                  :class="`bg-${child.color}-50 text-${child.color}-600`"
                 >
-                  <component
-                    v-if="child.icon"
-                    :size="16"
-                    :class="getTextColor(child.color)"
-                    :is="getIconComponent(child.icon)"
-                  />
+                  <component v-if="child.icon" :size="16" :is="getIconComponent(child.icon)" />
                 </div>
                 <div class="flex-1">
                   <div
@@ -68,13 +62,7 @@
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { nodeTypesList } from '@/components/Workflow/config/nodeTypes'
-import {
-  getIconComponent,
-  getTextColor,
-  getHoverTextColor,
-  getChildHoverClasses,
-  getChildIconClasses,
-} from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent, getHoverTextColor } from '@/components/Workflow/config/nodeConfig'
 
 const emit = defineEmits<{
   selectComponent: [componentType: string, sourceHandle?: any]
@@ -91,7 +79,7 @@ const show = (handle: any, nodeId: string, x: number, y: number) => {
   sourceHandle.value = handle
   sourceNodeId.value = nodeId
   top.value = y > 150 ? y - 150 : y
-  left.value = x + 160
+  left.value = x + 10
   console.log('弹窗位置:', top.value, left.value)
   visible.value = true
 }

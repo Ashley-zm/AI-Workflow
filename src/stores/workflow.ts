@@ -18,26 +18,32 @@ export const useWorkflowStore = defineStore('workflow', () => {
     {
       id: 'inputs',
       type: 'inputs',
-      position: { x: 100, y: 100 },
-      data: { label: 'inputs' },
+      position: { x: 0, y: 300 },
+      data: { label: 'inputs', config: [] },
     },
     {
-      id: 'object_detection_model',
-      type: 'object_detection_model',
-      position: { x: 50, y: 300 },
-      data: { label: 'Object_Detction_Model' },
+      id: 'detection_model',
+      type: 'detection_model',
+      position: { x: 300, y: 300 },
+      data: { label: 'Detection_Model', config: [] },
     },
     {
-      id: 'object_detection_model1',
-      type: 'object_detection_model',
-      position: { x: 350, y: 300 },
-      data: { label: 'Object_Detction_Model' },
+      id: 'bounding_box',
+      type: 'bounding_box',
+      position: { x: 600, y: 300 },
+      data: { label: 'Bounding_Box', config: [] },
+    },
+    {
+      id: 'label_visualization',
+      type: 'label_visualization',
+      position: { x: 900, y: 300 },
+      data: { label: 'Label_Visualization', config: [] },
     },
     {
       id: 'outputs',
       type: 'outputs',
-      position: { x: 100, y: 500 },
-      data: { label: 'outputs' },
+      position: { x: 1200, y: 300 },
+      data: { label: 'outputs', config: [] },
     },
   ])
   // 边
@@ -45,7 +51,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     {
       id: 'edge1',
       source: 'inputs',
-      target: 'object_detection_model',
+      target: 'detection_model',
       animated: true,
       type: 'button',
       markerEnd: {
@@ -58,8 +64,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
     },
     {
       id: 'edge2',
-      source: 'object_detection_model',
-      target: 'outputs',
+      source: 'detection_model',
+      target: 'bounding_box',
       animated: true,
       type: 'button',
       markerEnd: {
@@ -72,8 +78,22 @@ export const useWorkflowStore = defineStore('workflow', () => {
     },
     {
       id: 'edge3',
-      source: 'object_detection_model',
-      target: 'object_detection_model1',
+      source: 'bounding_box',
+      target: 'label_visualization',
+      animated: true,
+      type: 'button',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#555',
+      },
+      style: {
+        stroke: '#555',
+      },
+    },
+    {
+      id: 'edge4',
+      source: 'label_visualization',
+      target: 'outputs',
       animated: true,
       type: 'button',
       markerEnd: {
@@ -103,10 +123,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   // 更新节点数据
-  const updateNode = (nodeId: string, data: any) => {
+  const updateNode = (nodeId: string, config: any) => {
     const node = nodes.value.find((n) => n.id === nodeId)
     if (node) {
-      node.data = { ...node.data, ...data }
+      node.data.config = config
       // 记录操作后的状态
       historyStore.recordState(nodes.value, edges.value, 'update_node')
     }
@@ -129,6 +149,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 设置当前选中的节点（用于右侧属性面板显示）
   const setSelectedNode = (nodeId: string | null) => {
     selectedNode.value = nodes.value.find((n) => n.id === nodeId) || null
+    console.log('selectedNode.value', selectedNode.value)
   }
 
   // 撤销操作
@@ -181,10 +202,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const canUndo = computed(() => historyStore.canUndo)
   const canRedo = computed(() => historyStore.canRedo)
 
-  // 初始化后打印调试信息
-  console.log('Workflow store初始化完成')
-  console.log('canUndo:', canUndo.value)
-  console.log('canRedo:', canRedo.value)
+  const getEdges = computed(() => edges.value)
+  const getNodes = computed(() => nodes.value)
 
   return {
     nodes,
@@ -202,5 +221,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     canRedo,
     initializeHistory,
     historyStore, // 导出historyStore以便外部访问
+    getEdges,
+    getNodes,
   }
 })

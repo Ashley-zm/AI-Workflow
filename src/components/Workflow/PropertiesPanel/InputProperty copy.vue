@@ -65,16 +65,16 @@
                 @change="onPropertyTypeChange(property)"
                 class="w-full"
               >
-                <el-option label="Image" value="image">
-                  <div class="flex items-center gap-2">
-                    <div class="h-4 w-4 rounded bg-emerald-500"></div>
-                    <span>Image</span>
-                  </div>
-                </el-option>
                 <el-option label="Parameter" value="parameter">
                   <div class="flex items-center gap-2">
                     <div class="h-4 w-4 rounded bg-blue-500"></div>
                     <span>Parameter</span>
+                  </div>
+                </el-option>
+                <el-option label="Image" value="image">
+                  <div class="flex items-center gap-2">
+                    <div class="h-4 w-4 rounded bg-emerald-500"></div>
+                    <span>Image</span>
                   </div>
                 </el-option>
               </el-select>
@@ -188,16 +188,17 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { useWorkflowStore } from '@/stores/workflow'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { Trash2, Type, Hash, Image } from 'lucide-vue-next'
 
 const props = defineProps<{
-  modelValue: any
+  nodeId: string
 }>()
 
 const emit = defineEmits<{
-  'update:nodeConfig': [value: any]
+  updateProperties: [config: Property[]]
 }>()
 
 interface Property {
@@ -207,11 +208,20 @@ interface Property {
   defaultValue: string
 }
 
+const store = useWorkflowStore()
+
 const config = ref<Property[]>([])
 
+const getNodeData = () => {
+  const node = store.nodes.find((n) => n.id === props.nodeId)
+  return node?.data || {}
+}
+
 const initializeProperties = () => {
-  if (props.modelValue) {
-    config.value = JSON.parse(JSON.stringify(props.modelValue))
+  const nodeData = getNodeData()
+  console.log('初始化属性', nodeData)
+  if (nodeData.config.config) {
+    config.value = JSON.parse(JSON.stringify(nodeData.config.config))
   } else {
     config.value = []
   }
@@ -220,7 +230,7 @@ const initializeProperties = () => {
 const addProperty = () => {
   const newProperty: Property = {
     name: '',
-    type: 'image',
+    type: 'parameter',
     valueType: 'string',
     defaultValue: '',
   }
@@ -292,7 +302,8 @@ const handlePropertyNameInput = (property: Property, index: number) => {
     property.name = ''
     ElMessage.error(validation.message || '属性名称格式错误')
     config.value[index] = { ...property }
-    emit('update:nodeConfig', config.value)
+    store.updateNode(props.nodeId, { config: JSON.parse(JSON.stringify(config.value)) })
+    emit('updateProperties', config.value)
     config.value = [...config.value]
     return
   }
@@ -314,7 +325,9 @@ const updateProperties = () => {
       }
     }
   }
-  emit('update:nodeConfig', JSON.parse(JSON.stringify(config.value)))
+
+  store.updateNode(props.nodeId, JSON.parse(JSON.stringify(config.value)))
+  emit('updateProperties', config.value)
 }
 
 const updateProperty = () => {
@@ -368,7 +381,7 @@ onMounted(() => {
 })
 
 watch(
-  () => props.modelValue,
+  () => props.nodeId,
   () => {
     initializeProperties()
   },

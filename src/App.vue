@@ -1,9 +1,5 @@
-<script setup lang="ts">
-import Workflow from '@/views/Workflow.vue'
-</script>
-
 <template>
-  <Workflow />
+  <RouterView />
 </template>
 
 <style>

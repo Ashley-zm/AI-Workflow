@@ -17,14 +17,14 @@
             class="w-10 h-10 rounded-lg flex items-center justify-center"
             :class="`bg-${nodeColor}-100 text-${nodeColor}-600`"
           >
-            <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
+            <component :size="18" :is="getIconComponent(nodeType?.icon || 'VectorSquare')" />
           </div>
           <div class="flex flex-col">
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ nodeType?.name || 'Model' }}
+              {{ nodeType?.name || 'Visualization' }}
             </div>
-            <div class="text-[11px] text-gray-700 tracking-[1px]">
-              {{ nodeType?.description || 'Model 节点' }}
+            <div class="text-[11px] text-gray-700 tracking-[1px] line-height-5">
+              {{ nodeType?.description || 'Visualization 节点' }}
             </div>
           </div>
         </div>
@@ -36,7 +36,7 @@
           placement="top"
         >
           <div
-            class="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
+            class="flex items-center justify-center min-w-7 min-h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
           >
             <TriangleAlert :size="14" />
           </div>
@@ -52,9 +52,9 @@
               <Image :size="14" class="text-white" />
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-[10px] text-slate-400 tracking-[1px]">图片</div>
+              <div class="text-[10px] text-slate-400">图片属性</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ properties?.imagePath || '请选择图片...' }}
+                {{ properties?.imagePath || '请选择图片属性...' }}
               </div>
             </div>
           </div>
@@ -72,22 +72,22 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between p-1 rounded-lg border border-slate-100">
+        <div class="flex items-center justify-between p-1.5 rounded-lg border border-slate-100">
           <div class="flex items-center gap-2.5 flex-1 min-w-0">
             <div
               class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center bg-blue-500"
             >
-              <Brain :size="14" class="text-white" />
+              <Hash :size="14" class="text-white" />
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-[10px] text-slate-400 tracking-[1px]">模型</div>
-              <div class="text-xs font-medium text-slate-500 truncate">
-                {{ properties?.model_name || '请选择模型...' }}
+              <div class="text-[10px] text-slate-400">预测值</div>
+              <div class="text-xs font-medium text-slate-600 truncate">
+                {{ properties?.predictionPath || '请选择预测值...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.model_name"
+            v-if="properties?.predictionPath"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -124,18 +124,19 @@ import { computed, watch, ref, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
-import { TriangleAlert, Trash, Image, Brain, CheckCircle, AlertCircle } from 'lucide-vue-next'
+import { TriangleAlert, Trash, Image, Hash, CheckCircle, AlertCircle } from 'lucide-vue-next'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  config: any
   data: any
   selected?: boolean
   type: string
 }>()
-const properties = computed(() => props.data?.config?.[0] || {})
+
 const onHandleClick = computed(() => {
   return props.data?.onHandleClick as (
     event: MouseEvent,
@@ -145,25 +146,22 @@ const onHandleClick = computed(() => {
 })
 
 const nodeType = computed(() => getNodeType(props.type))
-const nodeColor = computed(() => nodeType.value?.color || 'blue')
+const nodeColor = computed(() => nodeType.value?.color || 'amber')
+const properties = computed(() => props.data?.config?.[0] || {})
 
 const deleteNode = () => {
   store.removeNode(props.id)
   store.setSelectedNode(null)
 }
 
-const initializeProperties = () => {
-  updateIsShowTip()
-}
-
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  if (!props.data?.config?.[0]?.imagePath) {
-    TipContent.value = '请选择图片'
+  if (!props.data?.config?.imagePath) {
+    TipContent.value = '请选择图片属性'
     isShowTip.value = true
-  } else if (!props.data?.config?.[0]?.model_id) {
-    TipContent.value = '请选择模型'
+  } else if (!props.data?.config?.predictionPath) {
+    TipContent.value = '请选择预测值'
     isShowTip.value = true
   } else {
     isShowTip.value = false
@@ -171,13 +169,13 @@ const updateIsShowTip = () => {
 }
 
 onMounted(() => {
-  initializeProperties()
+  updateIsShowTip()
 })
 
 watch(
   () => props.data,
   () => {
-    initializeProperties()
+    updateIsShowTip()
   },
   { deep: true },
 )

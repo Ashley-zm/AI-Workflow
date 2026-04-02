@@ -6,6 +6,7 @@
   <!-- 自定义边标签渲染器，用于渲染自定义边标签 -->
   <EdgeLabelRenderer>
     <div
+      v-if="labelVisible"
       :style="{
         pointerEvents: 'all',
         position: 'absolute',

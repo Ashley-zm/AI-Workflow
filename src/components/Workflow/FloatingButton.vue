@@ -1,6 +1,6 @@
 <template>
   <div
-    class="fixed top-8 left-8 z-50"
+    class="fixed top-20 left-8 z-50"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
@@ -35,7 +35,7 @@ const emit = defineEmits<{
 }>()
 
 // 状态管理
-const isOpen = ref(false)
+const isOpen = ref(true)
 const isHovered = ref(false)
 
 // 切换组件库显示状态
