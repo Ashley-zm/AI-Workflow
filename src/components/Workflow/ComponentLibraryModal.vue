@@ -65,19 +65,15 @@ import { nodeTypesList } from '@/components/Workflow/config/nodeTypes'
 import { getIconComponent, getHoverTextColor } from '@/components/Workflow/config/nodeConfig'
 
 const emit = defineEmits<{
-  selectComponent: [componentType: string, sourceHandle?: any]
+  selectComponent: [componentType: string]
 }>()
 
 const visible = ref(false)
-const sourceHandle = ref<any>(null)
-const sourceNodeId = ref<string>('')
 const top = ref<number>(0)
 const left = ref<number>(0)
 
 // 显示弹窗
-const show = (handle: any, nodeId: string, x: number, y: number) => {
-  sourceHandle.value = handle
-  sourceNodeId.value = nodeId
+const show = (x: number, y: number) => {
   top.value = y > 150 ? y - 150 : y
   left.value = x + 10
   console.log('弹窗位置:', top.value, left.value)
@@ -87,16 +83,11 @@ const show = (handle: any, nodeId: string, x: number, y: number) => {
 // 关闭弹窗
 const close = () => {
   visible.value = false
-  sourceHandle.value = null
-  sourceNodeId.value = ''
 }
 
 // 选择组件
 const selectComponent = (component: any) => {
-  emit('selectComponent', component.type, {
-    handle: sourceHandle.value,
-    sourceNodeId: sourceNodeId.value,
-  })
+  emit('selectComponent', component.type)
   close()
 }
 

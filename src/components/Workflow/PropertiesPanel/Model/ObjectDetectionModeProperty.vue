@@ -287,10 +287,10 @@ import { Picture, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getNodeTypeIcon, getParamTypeIcon } from '@/components/Workflow/config/nodeConfig'
 import { X, Zap, AlertCircle, CheckCircle, Brain, Image } from 'lucide-vue-next'
+import { getModelServiceList, getGpuInfo } from '@/api/workflow'
 
 const props = defineProps<{
   modelValue: any[]
-  nodeId: string
 }>()
 
 const emit = defineEmits<{
@@ -488,10 +488,9 @@ const copyJson = () => {
 const config = ref<any[]>([])
 const updateConfig = () => {
   let newConfig: Record<string, any> = {
-    imagePath: selectedImagePath.value,
+    images: selectedImagePath.value,
     model_id: selectedModel.value,
     model_name: selectedModelInfo.value?.name || '',
-    outputInfo: ['predictions'],
   }
   if (selectedModelInfo.value?.config) {
     selectedModelInfo.value.config.forEach((param: any) => {
@@ -503,12 +502,14 @@ const updateConfig = () => {
 }
 // 初始化数据
 const initializeData = () => {
-  if (props.modelValue.length > 0) {
-    selectedImagePath.value = props.modelValue[0].imagePath || ''
+  console.log('目标检测模型属性', props.modelValue)
+
+  if (props.modelValue.length) {
+    selectedImagePath.value = props.modelValue[0].images || ''
     selectedModel.value = props.modelValue[0].model_id || ''
     selectedModelInfo.value = mockModels.value.find((model) => model.id === selectedModel.value)
     config.value = props.modelValue
-    const noFilter = ['imagePath', 'model_id', 'model_name', 'outputInfo']
+    const noFilter = ['images', 'model_id', 'model_name']
     if (selectedModelInfo.value?.config) {
       props.modelValue.forEach((item: any) => {
         if (!noFilter.includes(item.name)) {
@@ -531,9 +532,28 @@ const clearData = () => {
 }
 
 watch(() => props.modelValue, initializeData, { immediate: true })
-
-onMounted(() => {
-  initializeData()
+const getModelList = async () => {
+  try {
+    const data = await getModelServiceList({
+      algorithmTypeDictId: 'classification',
+      pageNum: 1,
+      pageSize: 1000,
+    })
+    console.log('分类模型列表', data)
+    // data.rows.forEach((item: any) => {
+    //   item.name = item.modelName
+    // })
+    // mockModels.value = data.rows
+  } catch (error) {
+    console.error('获取分类模型列表失败', error)
+  }
+}
+const getGpu = async () => {
+  const data = await getGpuInfo()
+}
+onMounted(async () => {
+  await getModelList()
+  await getGpu()
 })
 </script>
 

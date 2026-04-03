@@ -451,7 +451,7 @@ const copyJson = () => {
 const config = ref<any[]>([])
 const updateConfig = () => {
   let newConfig: Record<string, any> = {
-    imagePath: selectedImagePath.value,
+    images: selectedImagePath.value,
     predictionPath: selectedPredictionPath.value,
     boxColor: boxColor.value,
     boxWidth: boxWidth.value,
@@ -463,7 +463,7 @@ const updateConfig = () => {
 
 const initializeData = () => {
   if (props.modelValue.length > 0) {
-    selectedImagePath.value = props.modelValue[0].imagePath || ''
+    selectedImagePath.value = props.modelValue[0].images || ''
     selectedPredictionPath.value = props.modelValue[0].predictionPath || ''
     boxColor.value = props.modelValue[0].boxColor || '#FF0000'
     boxWidth.value = props.modelValue[0].boxWidth || 2

@@ -1,15 +1,15 @@
 ﻿<template>
   <div class="group relative pt-5">
     <div
-      class="hidden shadow-lg border border-indigo-100 group-hover:block absolute -top-2 right-2 bg-white text-indigo-400 p-1.5 rounded-md cursor-pointer hover:bg-indigo-200 transition-colors"
+      class="hidden shadow-lg border border-red-100 group-hover:block absolute -top-2 right-2 bg-white text-red-400 p-1.5 rounded-md cursor-pointer hover:bg-red-200 transition-colors"
       @click.stop="deleteNode"
       title="删除节点"
     >
       <Trash :size="14" />
     </div>
     <div
-      class="group relative w-[260px] bg-white rounded-xl border hover:border-indigo-500 shadow transition-all"
-      :class="[selected ? 'border-1 border-indigo-500 shadow-xl' : 'border-1 border-gray-200']"
+      class="group relative w-[250px] bg-white rounded-xl border border-gray-200 shadow transition-all"
+      :class="[selected ? `shadow-xl` : `hover:shadow-xl`]"
     >
       <div class="flex items-center justify-between p-3 rounded-t-xl border-b border-gray-200">
         <div class="flex items-center gap-3">
@@ -43,7 +43,7 @@
         </el-tooltip>
       </div>
 
-      <div class="p-2 space-y-2">
+      <div class="p-2 space-y-2" v-if="selected">
         <div class="flex items-center justify-between p-1.5 rounded-lg border border-slate-100">
           <div class="flex items-center gap-2.5 flex-1 min-w-0">
             <div
@@ -112,14 +112,7 @@ import { computed, watch, ref, onMounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
-import {
-  TriangleAlert,
-  Trash,
-  Filter,
-  GitFork,
-  CheckCircle,
-  AlertCircle,
-} from 'lucide-vue-next'
+import { TriangleAlert, Trash, Filter, GitFork, CheckCircle, AlertCircle } from 'lucide-vue-next'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 

@@ -2,7 +2,7 @@
   <div class="flex h-screen w-full overflow-hidden bg-slate-50" @drop="onDrop" @dragover.prevent>
     <button
       type="button"
-      class="absolute min-w-[200px] top-4 left-5 z-50 flex items-center gap-2 bg-white px-4 py-3 rounded-md border-b border-gray-200 cursor-pointer shadow-md"
+      class="absolute min-w-[200px] top-2 left-5 z-50 flex items-center gap-2 bg-white px-4 py-3 rounded-md border-b border-gray-200 cursor-pointer shadow-md"
       @click="handleBackClick"
     >
       <ChevronLeft :size="18" class="text-blue-500" />
@@ -12,10 +12,11 @@
       <VueFlow
         class="basic-flow bg-white"
         v-model:nodes="nodesWithEvents"
-        v-model:edges="store.edges"
+        v-model:edges="edgesWithEvents"
         :node-types="nodeTypesWithEvents"
         @node-click="onNodeClick"
         @pane-click="onPaneClick"
+        @pane-drag="onPaneDrag"
         @node-drag-stop="onNodeDragStop"
         :default-viewport="{ zoom: 0.5 }"
         fit-view-on-init
@@ -64,7 +65,7 @@
             :target-y="targetY"
           />
         </template>
-        <Background pattern-color="#999" :gap="24" :size="1.5" />
+        <Background />
         <MiniMap v-if="showMinimap" class="mini-map" :pannable="true" :zoomable="true" />
       </VueFlow>
 
@@ -131,7 +132,7 @@
       />
 
       <!-- 悬浮按钮组件 -->
-      <FloatingButton @drag-start="onDragStart" @select-component="handleComponentSelect" />
+      <FloatingButton @drag-start="onDragStart" />
     </div>
 
     <div
@@ -163,21 +164,28 @@ import WorkflowToolbar from '@/components/Workflow/Control/WorkflowToolbar.vue'
 import WorkflowHealthPanel from '@/components/Workflow/Control/WorkflowHealthPanel.vue'
 import WorkflowHistoryPanel from '@/components/Workflow/Control/WorkflowHistoryPanel.vue'
 import { allNodeTypes, getNodeType } from '@/components/Workflow/config/nodeTypes'
-import { onMounted, onUnmounted, ref, computed, markRaw } from 'vue'
+import { onMounted, onUnmounted, ref, computed, markRaw, nextTick } from 'vue'
 // import HistoryControl from '@/components/Workflow/HistoryControl.vue'
 import EdgeWithButton from '@/components/Workflow/Edges/EdgeWithButton.vue'
 import CustomEdge from '@/components/Workflow/Edges/CustomEdge.vue'
 import CustomConnectionLine from '@/components/Workflow/Edges/CustomConnectionLine.vue'
 import ComponentLibraryModal from '@/components/Workflow/ComponentLibraryModal.vue'
-import { getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
+// import { getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
 import WorkflowDebugPanel from '@/components/Workflow/Debug/WorkflowDebugPanel.vue'
 import { useRouter } from 'vue-router'
+import { watch } from 'vue'
 
 const store = useWorkflowStore()
 const router = useRouter()
-const { onInit, project, onConnect, addNodes, addEdges, viewport, fitView } = useVueFlow()
+const { onInit, project, onConnect, fitView, viewport } = useVueFlow()
 
 const backButtonText = '\u8fd4\u56de\u5de5\u4f5c\u6d41\u7ba1\u7406'
+const NODE_WIDTH = 300
+const NODE_HEIGHT = 80
+const NODE_HORIZONTAL_GAP = 80
+const NODE_VERTICAL_GAP = 60
+const NODE_COLUMN_STEP = NODE_WIDTH + NODE_HORIZONTAL_GAP
+const NODE_ROW_STEP = NODE_HEIGHT + NODE_VERTICAL_GAP
 
 const handleBackClick = async () => {
   if (window.history.length > 1) {
@@ -285,8 +293,14 @@ const nodesWithEvents = computed(() => {
     ...node,
     data: {
       ...node.data,
-      onHandleClick: handleHandleClick,
+      // onHandleClick: handleHandleClick,
     },
+  }))
+})
+// 修改边数据以包含事件处理器
+const edgesWithEvents = computed(() => {
+  return store.edges.map((edge) => ({
+    ...edge,
   }))
 })
 
@@ -294,11 +308,6 @@ const nodesWithEvents = computed(() => {
 const componentLibraryModal = ref<InstanceType<typeof ComponentLibraryModal>>()
 
 // 当前点击的handle信息
-const currentHandleInfo = ref<{
-  nodeId: string
-  handleType: 'source' | 'target'
-  position: { x: number; y: number }
-} | null>(null)
 
 // 创建带事件的节点类型
 const nodeTypesWithEvents = computed(() => {
@@ -344,10 +353,9 @@ onConnect((connection) => {
     id: `edge_${Date.now()}`,
     source: connection.source,
     target: connection.target,
-    sourceHandle: connection.sourceHandle,
-    targetHandle: connection.targetHandle,
-    type: 'button',
-    ...getNodeEdgeType('button'),
+    // sourceHandle: connection.sourceHandle,
+    // targetHandle: connection.targetHandle,
+    // ...getNodeEdgeType(),
   }
   store.addEdge(edge)
 })
@@ -359,7 +367,7 @@ onMounted(() => {
     // 获取当前视图状态
     const viewport = vueFlowInstance.getViewport()
     // 设置zoom为0.5 xy居中
-    vueFlowInstance.setViewport({ ...viewport, zoom: 1, x: 300, y: 100 })
+    vueFlowInstance.setViewport({ ...viewport, zoom: 1, x: 500, y: 100 })
     console.log('当前视图状态:', viewport)
     // 初始化历史记录
     console.log('初始化VueFlow，准备初始化历史记录')
@@ -394,7 +402,13 @@ const onPaneClick = (event: MouseEvent) => {
   // 关闭组件库弹窗
   componentLibraryModal.value?.close()
   // 清空当前handle信息
-  currentHandleInfo.value = null
+  store.clearCurrentHandleInfo()
+}
+// 工作流视图面板拖拽事件
+const onPaneDrag = (event: MouseEvent) => {
+  // !!!!!不生效
+  console.log('拖拽面板:', event.clientX, event.clientY)
+  store.clearCurrentHandleInfo()
 }
 // 组件库弹窗点击事件
 const onDrop = (event: DragEvent) => {
@@ -408,229 +422,169 @@ const onDrop = (event: DragEvent) => {
     id: `${type}_${Date.now()}`,
     type: nodeType.type,
     position,
-    name: nodeType.name,
-    data:
-      type === 'object_detection_model'
-        ? {
-            config: {
-              imagePath: '',
-              model: '',
-              modelInfo: null,
-            },
-            onHandleClick: handleHandleClick,
-          }
-        : {
-            onHandleClick: handleHandleClick,
-          },
+    data: {
+      nodeTag: nodeType.type,
+      config: [],
+    },
   }
-
-  // 使用 store 的 addNode 方法来确保历史记录被正确记录
   store.addNode(newNode)
 }
 // 自动布局函数
-const autoLayout = () => {
-  console.log('自动布局函数被调用')
+const autoLayout = async () => {
   const nodes = store.nodes
   const edges = store.edges
+  if (!nodes.length) return
 
-  console.log('节点数量:', nodes.length, '边数量:', edges.length)
+  // 左到右布局，保证节点间不遮挡
+  const startX = 120
+  const startY = 80
+  const horizontalSpacing = NODE_COLUMN_STEP
+  const verticalSpacing = NODE_ROW_STEP
 
-  // 设置布局参数
-  const verticalSpacing = 250 // 节点之间的垂直间距（增加以避免遮挡）
-  const horizontalSpacing = 350 // 节点之间的水平间距（节点宽度280px + 70px间距）
-  // 屏幕宽度的中间
-  const startX = window.innerWidth / 4 // 起始X坐标（居中）
-  console.log('起始X坐标:', window.innerWidth, startX)
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const indegree = new Map<string, number>()
+  const nodeParents = new Map<string, string[]>()
+  const nodeChildren = new Map<string, string[]>()
+  const nodeLevels = new Map<string, number>()
 
-  const startY = 0 // 起始Y坐标
-
-  // 创建节点层级关系 - 完全基于边关系，不考虑原始位置
-  const nodeLevels: Record<string, number> = {}
-  const processedNodes: Record<string, boolean> = {}
-  const nodeParents: Record<string, string[]> = {} // 记录每个节点的父节点
-  const nodeChildren: Record<string, string[]> = {} // 记录每个节点的子节点
-
-  // 重置所有节点的处理状态
   nodes.forEach((node) => {
-    processedNodes[node.id] = false
-    nodeParents[node.id] = []
-    nodeChildren[node.id] = []
+    indegree.set(node.id, 0)
+    nodeParents.set(node.id, [])
+    nodeChildren.set(node.id, [])
   })
 
-  // 根据边建立父子关系
   edges.forEach((edge) => {
-    if (!nodeParents[edge.target]) {
-      nodeParents[edge.target] = []
-    }
-    if (!nodeChildren[edge.source]) {
-      nodeChildren[edge.source] = []
-    }
-    nodeParents[edge.target]!.push(edge.source)
-    nodeChildren[edge.source]!.push(edge.target)
+    if (!nodeById.has(edge.source) || !nodeById.has(edge.target)) return
+    indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1)
+    nodeParents.get(edge.target)?.push(edge.source)
+    nodeChildren.get(edge.source)?.push(edge.target)
   })
 
-  // 优先找出类型为'inputs'的节点作为根节点
-  const inputNodes = nodes.filter((node) => node.type === 'inputs')
-  console.log('输入节点:', inputNodes)
-
-  // 为输入节点设置层级0
-  inputNodes.forEach((node) => {
-    nodeLevels[node.id] = 0
-    processedNodes[node.id] = true
-  })
-
-  // 如果没有inputs节点，找出没有入边的节点作为起始节点
-  if (inputNodes.length === 0) {
-    const noIncomingEdgeNodes = nodes.filter((node) => {
-      return !edges.some((edge) => edge.target === node.id)
-    })
-
-    console.log('无入边节点:', noIncomingEdgeNodes)
-
-    noIncomingEdgeNodes.forEach((node) => {
-      nodeLevels[node.id] = 0
-      processedNodes[node.id] = true
-    })
-  }
-
-  // 如果仍然没有起始节点（例如环形连接），选择第一个节点作为起始节点
-  if (Object.keys(nodeLevels).length === 0 && nodes.length > 0) {
-    const firstNode = nodes[0]
-    if (firstNode) {
-      nodeLevels[firstNode.id] = 0
-      processedNodes[firstNode.id] = true
-      console.log('选择第一个节点作为起始节点:', firstNode.id)
-    }
-  }
-
-  // 使用BFS计算节点层级 - 完全基于边关系
-  const queue: string[] = Object.keys(nodeLevels).filter((nodeId) => nodeLevels[nodeId] === 0)
-
-  while (queue.length > 0) {
-    const currentNodeId = queue.shift()!
-    const currentLevel = nodeLevels[currentNodeId]
-
-    // 处理当前节点的所有子节点
-    const children = nodeChildren[currentNodeId]
-    if (children) {
-      children.forEach((childNodeId) => {
-        if (!processedNodes[childNodeId]) {
-          // 检查是否所有父节点都已处理
-          const parents = nodeParents[childNodeId]
-          if (parents) {
-            const allParentsProcessed = parents.every((parentId) => processedNodes[parentId])
-
-            if (allParentsProcessed) {
-              // 计算子节点的层级（所有父节点层级的最大值+1）
-              const maxParentLevel = Math.max(
-                ...parents.map((parentId) => nodeLevels[parentId] || 0),
-              )
-              nodeLevels[childNodeId] = maxParentLevel + 1
-              processedNodes[childNodeId] = true
-              queue.push(childNodeId)
-            }
-          }
-        }
-      })
-    }
-  }
-
-  // 为未处理的节点分配层级
+  const queue: string[] = []
   nodes.forEach((node) => {
-    if (!processedNodes[node.id]) {
-      if (node.type === 'outputs') {
-        // 输出节点放在最后
-        const maxLevel = Math.max(...Object.values(nodeLevels), 0)
-        nodeLevels[node.id] = maxLevel + 1
-        processedNodes[node.id] = true
-      } else {
-        // 其他节点放在中间
-        nodeLevels[node.id] = 1
-        processedNodes[node.id] = true
-      }
+    if ((indegree.get(node.id) ?? 0) === 0) {
+      nodeLevels.set(node.id, 0)
+      queue.push(node.id)
     }
   })
 
-  console.log('节点层级:', nodeLevels)
+  // 处理全环等极端情况
+  if (!queue.length && nodes[0]) {
+    nodeLevels.set(nodes[0].id, 0)
+    queue.push(nodes[0].id)
+  }
 
-  // 按层级分组节点
-  const levels: Record<number, any[]> = {}
-  Object.keys(nodeLevels).forEach((nodeId) => {
-    const level = nodeLevels[nodeId]
-    if (level !== undefined && level !== null) {
-      if (!levels[level]) {
-        levels[level] = []
-      }
-      const node = nodes.find((n) => n.id === nodeId)
-      if (node) {
-        levels[level].push(node)
-      }
+  // 拓扑遍历：子节点层级 = 父节点层级 + 1
+  while (queue.length) {
+    const currentNodeId = queue.shift()!
+    const currentLevel = nodeLevels.get(currentNodeId) ?? 0
+
+    for (const childNodeId of nodeChildren.get(currentNodeId) ?? []) {
+      nodeLevels.set(childNodeId, Math.max(nodeLevels.get(childNodeId) ?? 0, currentLevel + 1))
+      const nextInDegree = (indegree.get(childNodeId) ?? 0) - 1
+      indegree.set(childNodeId, nextInDegree)
+      if (nextInDegree === 0) queue.push(childNodeId)
+    }
+  }
+
+  // 补齐未分配层级的节点（断开图/环）
+  let maxAssignedLevel = Math.max(...Array.from(nodeLevels.values()), 0)
+  nodes.forEach((node) => {
+    if (!nodeLevels.has(node.id)) {
+      maxAssignedLevel += 1
+      nodeLevels.set(node.id, maxAssignedLevel)
     }
   })
 
-  // 按层级排序
-  const sortedLevels = Object.keys(levels)
-    .map(Number)
-    .sort((a, b) => a - b)
+  // 输出节点固定在最右列
+  const currentMaxLevel = Math.max(...Array.from(nodeLevels.values()), 0)
+  nodes.forEach((node) => {
+    if (node.type !== 'outputs') return
 
-  // 设置节点位置 - 完全重新计算位置，不考虑原始位置
-  sortedLevels.forEach((level) => {
-    const levelNodes = levels[level]
-    if (!levelNodes) {
+    const parentLevels = (nodeParents.get(node.id) ?? []).map(
+      (parentId) => nodeLevels.get(parentId) ?? 0,
+    )
+    if (parentLevels.length) {
+      nodeLevels.set(node.id, Math.max(...parentLevels) + 1)
       return
     }
 
-    // 计算该层节点的位置
-    const levelNodeCount = levelNodes.length
-    const levelTotalWidth = (levelNodeCount - 1) * horizontalSpacing
-    const levelStartX = startX - levelTotalWidth / 2
+    nodeLevels.set(node.id, currentMaxLevel + 1)
+  })
 
-    // 对同层节点进行排序，使布局更加有序
-    levelNodes.sort((a, b) => {
-      // 如果两个节点有共同的父节点，按照父节点的顺序排列
-      const aParents = nodeParents[a.id] || []
-      const bParents = nodeParents[b.id] || []
+  const levels = new Map<number, string[]>()
+  nodeLevels.forEach((level, nodeId) => {
+    if (!levels.has(level)) levels.set(level, [])
+    levels.get(level)?.push(nodeId)
+  })
 
-      // 如果有共同的父节点，按照父节点的层级和位置排序
-      const commonParent = aParents.find((parentId) => bParents.includes(parentId))
-      if (commonParent) {
-        const parentLevel = nodeLevels[commonParent]
-        if (parentLevel !== undefined) {
-          const parentNodes = levels[parentLevel] || []
-          const parentIndex = parentNodes.findIndex((n) => n.id === commonParent)
-          if (parentIndex !== -1) {
-            // 根据父节点在层级中的位置确定子节点的相对顺序
-            return 0
-          }
-        }
-      }
+  const sortedLevels = Array.from(levels.keys()).sort((a, b) => a - b)
+  const yOrderByNodeId = new Map<string, number>()
 
-      // 默认按节点ID排序
-      return a.id.localeCompare(b.id)
+  // 层内按父节点重心排序，然后按固定间距摆放，避免遮挡
+  sortedLevels.forEach((level) => {
+    const levelNodeIds = levels.get(level) ?? []
+    const usedRows = new Set<number>()
+
+    levelNodeIds.sort((a, b) => {
+      const aParents = nodeParents.get(a) ?? []
+      const bParents = nodeParents.get(b) ?? []
+
+      const avg = (values: number[]) =>
+        values.length
+          ? values.reduce((sum, value) => sum + value, 0) / values.length
+          : Number.POSITIVE_INFINITY
+
+      const aScore = avg(aParents.map((parentId) => yOrderByNodeId.get(parentId) ?? 0))
+      const bScore = avg(bParents.map((parentId) => yOrderByNodeId.get(parentId) ?? 0))
+
+      if (aScore !== bScore) return aScore - bScore
+      return a.localeCompare(b)
     })
 
-    levelNodes.forEach((node, index) => {
+    const findNearestFreeRow = (desiredRow: number) => {
+      const normalizedDesiredRow = Math.max(0, desiredRow)
+      if (!usedRows.has(normalizedDesiredRow)) return normalizedDesiredRow
+
+      for (let step = 1; step <= levelNodeIds.length + 20; step += 1) {
+        const lower = normalizedDesiredRow - step
+        const upper = normalizedDesiredRow + step
+
+        if (lower >= 0 && !usedRows.has(lower)) return lower
+        if (!usedRows.has(upper)) return upper
+      }
+
+      return normalizedDesiredRow + usedRows.size
+    }
+
+    levelNodeIds.forEach((nodeId, index) => {
+      const node = nodeById.get(nodeId)
       if (!node) return
 
-      // 计算节点位置 - 完全重新计算
-      const x = levelStartX + index * horizontalSpacing
-      const y = startY + level * verticalSpacing
-      console.log('节点位置:', node.id, { x, y })
-      // 更新节点位置 - 完全基于边关系的新位置
+      const parentRows = (nodeParents.get(nodeId) ?? [])
+        .map((parentId) => yOrderByNodeId.get(parentId))
+        .filter((row): row is number => row !== undefined)
+      const desiredRow =
+        parentRows.length > 0
+          ? Math.round(parentRows.reduce((sum, row) => sum + row, 0) / parentRows.length)
+          : index
+      const rowIndex = findNearestFreeRow(desiredRow)
+
+      usedRows.add(rowIndex)
+      yOrderByNodeId.set(nodeId, rowIndex)
       node.position = {
-        x,
-        y,
+        x: startX + level * horizontalSpacing,
+        y: startY + rowIndex * verticalSpacing,
       }
     })
   })
 
-  console.log(
-    '布局后的节点位置:',
-    nodes.map((n) => ({ id: n.id, position: n.position })),
-  )
-
-  // 记录布局后的状态
   store.historyStore.recordState(store.nodes, store.edges, 'auto_layout')
+  await nextTick()
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+  fitView({ padding: 0.25 })
 }
 
 // 切换锁定状态
@@ -675,108 +629,143 @@ const handleStartDebug = (payload: {
   console.log('当前边：', payload.edges)
   // 这里可以对接实际推理 / 执行逻辑，例如调用后端 API 触发一次 workflow 运行
 }
-
-// Handle点击事件处理
-const handleHandleClick = (event: MouseEvent, handleType: 'source' | 'target', nodeId: string) => {
-  console.log('Handle被点击:', {
-    nodeId,
-    handleType,
-    position: { x: event.clientX, y: event.clientY },
-  })
-
-  // 保存当前handle信息
-  currentHandleInfo.value = {
-    nodeId,
-    handleType,
-    position: { x: event.clientX, y: event.clientY },
-  }
-
-  // 显示组件库弹窗
-  componentLibraryModal.value?.show(currentHandleInfo.value, nodeId, event.clientX, event.clientY)
-}
+watch(
+  () => store.currentHandleInfo,
+  (newVal) => {
+    if (newVal) {
+      componentLibraryModal.value?.show(newVal.position.x, newVal.position.y)
+    }
+  },
+)
 
 // 组件选择处理
-const handleComponentSelect = (componentType: string, handleInfo: any) => {
-  console.log('选择了组件类型:', componentType, '从handle:', handleInfo)
+const resolveNewNodePosition = (
+  anchorNode: { id: string | number; position: { x: number; y: number } },
+  handleType: 'source' | 'target',
+) => {
+  const nodes = store.nodes
+  const edges = store.edges
+  const direction = handleType === 'source' ? 1 : -1
+  const columnGap = NODE_COLUMN_STEP
+  const rowGap = NODE_ROW_STEP
+  const minDeltaX = NODE_WIDTH + 20
+  const minDeltaY = NODE_HEIGHT + 20
+  const anchorX = anchorNode.position.x
+  const anchorY = anchorNode.position.y
 
-  if (!currentHandleInfo.value) return
+  const minX = Math.min(...nodes.map((node) => node.position.x), anchorX)
+  const minY = Math.min(...nodes.map((node) => node.position.y), anchorY)
 
-  const { nodeId, handleType } = currentHandleInfo.value
+  const toColumnIndex = (x: number) => Math.round((x - minX) / columnGap)
+  const toRowIndex = (y: number) => Math.round((y - minY) / rowGap)
+  const fromColumnIndex = (index: number) => minX + index * columnGap
+  const fromRowIndex = (index: number) => minY + index * rowGap
+
+  const anchorColumnIndex = toColumnIndex(anchorX)
+  const preferredColumnIndex = anchorColumnIndex + direction
+
+  const relatedYValues =
+    handleType === 'source'
+      ? edges
+          .filter((edge) => edge.source === anchorNode.id)
+          .map((edge) => nodes.find((node) => node.id === edge.target)?.position.y)
+          .filter((y): y is number => typeof y === 'number')
+      : edges
+          .filter((edge) => edge.target === anchorNode.id)
+          .map((edge) => nodes.find((node) => node.id === edge.source)?.position.y)
+          .filter((y): y is number => typeof y === 'number')
+
+  const avg = (list: number[]) => list.reduce((sum, value) => sum + value, 0) / list.length
+  const targetY = relatedYValues.length ? avg(relatedYValues) : anchorY
+  const baseRowIndex = toRowIndex(targetY)
+
+  const rowOffsets: number[] = [0]
+  for (let i = 1; i <= 12; i += 1) {
+    rowOffsets.push(i, -i)
+  }
+
+  const candidateColumnIndices: number[] = []
+  for (let step = 0; step <= 10; step += 1) {
+    const primary = preferredColumnIndex + direction * step
+    if (!candidateColumnIndices.includes(primary)) {
+      candidateColumnIndices.push(primary)
+    }
+    const secondary = preferredColumnIndex - direction * (step + 1)
+    if (!candidateColumnIndices.includes(secondary)) {
+      candidateColumnIndices.push(secondary)
+    }
+  }
+
+  const isOccupied = (x: number, y: number) =>
+    nodes.some((node) => {
+      return Math.abs(node.position.x - x) < minDeltaX && Math.abs(node.position.y - y) < minDeltaY
+    })
+
+  for (const columnIndex of candidateColumnIndices) {
+    const x = fromColumnIndex(columnIndex)
+    for (const rowOffset of rowOffsets) {
+      const y = fromRowIndex(baseRowIndex + rowOffset)
+      if (!isOccupied(x, y)) {
+        return { x, y }
+      }
+    }
+  }
+
+  return {
+    x: anchorX + direction * columnGap,
+    y: anchorY + rowGap,
+  }
+}
+// 弹框组件库-选择处理
+const handleComponentSelect = (componentType: string) => {
+  console.log('选择了组件类型:', componentType)
+  if (!store.currentHandleInfo) return
+
+  const { nodeId } = store.currentHandleInfo
 
   // 创建新节点
   const nodeType = getNodeType(componentType)
   if (!nodeType) return
-
+  console.log('nodeType:', nodeType)
   // 计算新节点的位置（在当前节点的右侧）
   const currentNode = store.nodes.find((n) => n.id === nodeId)
   if (!currentNode) return
 
-  const newPosition = {
-    x: currentNode.position.x + 300,
-    y: currentNode.position.y + 200,
-  }
+  const newPosition = resolveNewNodePosition(currentNode, 'source')
+  // 过滤
+  const step = store.nodes.filter((n) => n.data.label === 'steps').length + 1
+  // 获取所有node
+  console.log('allNodes-step:', step)
 
   // 创建新节点
   const newNode = {
-    id: `${componentType}_${Date.now()}`,
+    id: `$${nodeType.name}_1`,
     type: nodeType.type,
     position: newPosition,
-    name: nodeType.name,
-    data:
-      componentType === 'object_detection_model'
-        ? {
-            config: {
-              imagePath: '',
-              model: '',
-              modelInfo: null,
-            },
-            onHandleClick: handleHandleClick,
-          }
-        : {
-            onHandleClick: handleHandleClick,
-          },
+    data: {
+      label: 'steps',
+      config: [],
+    },
   }
 
   // 添加新节点
-  addNodes([newNode])
   store.addNode(newNode)
   // 创建连接边
-  if (handleType === 'source') {
-    // 从当前节点连接到新节点
-    const edge = {
-      id: `edge_${Date.now()}`,
-      source: nodeId,
-      target: newNode.id,
-      sourceHandle: null,
-      targetHandle: null,
-      type: 'button',
-      ...getNodeEdgeType('button'),
-    }
-    console.log('创建连接边:', edge)
-    addEdges([edge])
-    store.addEdge(edge)
-  } else if (handleType === 'target') {
-    // 从新节点连接到当前节点
-    const edge = {
-      id: `edge_${Date.now()}`,
-      source: newNode.id,
-      target: nodeId,
-      sourceHandle: null,
-      targetHandle: null,
-      type: 'button',
-      ...getNodeEdgeType('button'),
-    }
-    console.log('创建连接边:', edge)
-    addEdges([edge])
-    store.addEdge(edge)
+  // 从当前节点连接到新节点
+  const edge = {
+    id: `edge_${Date.now()}`,
+    source: nodeId,
+    target: newNode.id,
+    // ...getNodeEdgeType(),
   }
+  store.addEdge(edge)
 
   // 打印当前所有节点和边
   console.log('当前节点:', store.nodes)
   console.log('当前边:', store.edges)
 
   // 清空当前handle信息
-  currentHandleInfo.value = null
+  store.clearCurrentHandleInfo()
 }
 </script>
 

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Node, Edge } from '@vue-flow/core'
 import { useHistoryStore } from './history'
-import { MarkerType } from '@vue-flow/core'
+// import { MarkerType } from '@vue-flow/core'
 export const useWorkflowStore = defineStore('workflow', () => {
   const historyStore = useHistoryStore()
 
@@ -16,97 +16,25 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 节点 默认存在一个起始节点，一个结束节点
   const nodes = ref<Node[]>([
     {
-      id: 'inputs',
+      id: '$inputs',
       type: 'inputs',
-      position: { x: 0, y: 300 },
-      data: { label: 'inputs', config: [] },
+      position: { x: 100, y: 300 },
+      data: { nodeTag: 'inputs', config: [] },
     },
     {
-      id: 'detection_model',
-      type: 'detection_model',
-      position: { x: 300, y: 300 },
-      data: { label: 'Detection_Model', config: [] },
-    },
-    {
-      id: 'bounding_box',
-      type: 'bounding_box',
-      position: { x: 600, y: 300 },
-      data: { label: 'Bounding_Box', config: [] },
-    },
-    {
-      id: 'label_visualization',
-      type: 'label_visualization',
-      position: { x: 900, y: 300 },
-      data: { label: 'Label_Visualization', config: [] },
-    },
-    {
-      id: 'outputs',
+      id: '$outputs',
       type: 'outputs',
-      position: { x: 1200, y: 300 },
-      data: { label: 'outputs', config: [] },
+      position: { x: 500, y: 300 },
+      data: { nodeTag: 'outputs', config: [] },
     },
   ])
   // 边
-  const edges = ref<Edge[]>([
-    {
-      id: 'edge1',
-      source: 'inputs',
-      target: 'detection_model',
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#555',
-      },
-      style: {
-        stroke: '#555',
-      },
-    },
-    {
-      id: 'edge2',
-      source: 'detection_model',
-      target: 'bounding_box',
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#555',
-      },
-      style: {
-        stroke: '#555',
-      },
-    },
-    {
-      id: 'edge3',
-      source: 'bounding_box',
-      target: 'label_visualization',
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#555',
-      },
-      style: {
-        stroke: '#555',
-      },
-    },
-    {
-      id: 'edge4',
-      source: 'label_visualization',
-      target: 'outputs',
-      animated: true,
-      type: 'button',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#555',
-      },
-      style: {
-        stroke: '#555',
-      },
-    },
-  ])
+  const edges = ref<Edge[]>([])
   const selectedNode = ref<Node | null>(null)
-
+  const currentHandleInfo = ref<{
+    nodeId: string
+    position: { x: number; y: number }
+  } | null>(null)
   // 添加节点
   const addNode = (node: Node) => {
     nodes.value.push(node)
@@ -149,7 +77,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 设置当前选中的节点（用于右侧属性面板显示）
   const setSelectedNode = (nodeId: string | null) => {
     selectedNode.value = nodes.value.find((n) => n.id === nodeId) || null
-    console.log('selectedNode.value', selectedNode.value)
+  }
+  const setCurrentHandleInfo = (nodeId: string, event: MouseEvent) => {
+    currentHandleInfo.value = {
+      nodeId,
+      position: { x: event.clientX, y: event.clientY },
+    }
+  }
+  const clearCurrentHandleInfo = () => {
+    currentHandleInfo.value = null
   }
 
   // 撤销操作
@@ -209,6 +145,12 @@ export const useWorkflowStore = defineStore('workflow', () => {
     nodes,
     edges,
     selectedNode,
+    canUndo,
+    canRedo,
+    historyStore, // 导出historyStore以便外部访问
+    getEdges,
+    getNodes,
+    currentHandleInfo,
     addNode,
     removeNode,
     updateNode,
@@ -217,11 +159,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
     setSelectedNode,
     undo,
     redo,
-    canUndo,
-    canRedo,
     initializeHistory,
-    historyStore, // 导出historyStore以便外部访问
-    getEdges,
-    getNodes,
+    setCurrentHandleInfo,
+    clearCurrentHandleInfo,
   }
 })

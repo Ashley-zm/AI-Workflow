@@ -54,7 +54,7 @@ const store = useWorkflowStore()
 
 // 组件映射表
 const propertyComponents = {
-  detection_model: markRaw(ObjectDetectionModeProperty),
+  'detection_model@v1': markRaw(ObjectDetectionModeProperty),
   classification_model: markRaw(ObjectDetectionModeProperty),
   segmentation_model: markRaw(ObjectDetectionModeProperty),
   inputs: markRaw(InputProperty),

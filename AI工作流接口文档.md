@@ -2,6 +2,12 @@
 
 # 1： 工作流
 
+开发环境:VITE_APP_BASE_API = '/dev-api'
+
+生产环境:VITE_APP_BASE_API = '/prod-api'
+
+base_url: http://192.168.99.180:49080
+
 ## 1.1：工作流管理
 
 ### 1.1.1：创建或编辑工作流
@@ -12,7 +18,7 @@
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/addOrUpdateWorkflow
+POST /cyc/workflowManage/v0.5/addOrUpdateWorkflow
 
 - 请求参数
 
@@ -186,7 +192,7 @@ POST /cyc/workflow/v0.5/addOrUpdateWorkflow
 
 - **请求地址**
 
-GET /cyc/workflow/v0.5/list
+GET /cyc/workflowManage/v0.5/list
 
 - **请求参数**
 
@@ -200,7 +206,7 @@ GET /cyc/workflow/v0.5/list
 - **请求实例**
 
   ```json
-  /cyc/workflow/v0.5/list?pageNum=1&pageSize=10&keyword=检测&groupId=2
+  /cyc/workflowManage/v0.5/list?pageNum=1&pageSize=10&keyword=检测&groupId=2
   ```
 
 - **响应返回**
@@ -236,7 +242,7 @@ GET /cyc/workflow/v0.5/list
 
 - 请求地址
 
-DELETE /cyc/workflow/v0.5/delete
+DELETE /cyc/workflowManage/v0.5/delete
 
 - 请求参数
 
@@ -247,7 +253,7 @@ DELETE /cyc/workflow/v0.5/delete
 - 请求实例
 
   ```json
-  /cyc/workflow/v0.5/delete/{id}
+  /cyc/workflowManage/v0.5/delete/{id}
   ```
 
 - 响应返回
@@ -268,7 +274,7 @@ DELETE /cyc/workflow/v0.5/delete
 
 - 请求地址
 
-GET /cyc/workflow/v0.5/isDeployed
+GET /cyc/workflowManage/v0.5/isDeployed
 
 - 请求参数
 
@@ -279,7 +285,7 @@ GET /cyc/workflow/v0.5/isDeployed
 - 请求实例
 
   ```json
-  /cyc/workflow/v0.5/isDeployed/{id}
+  /cyc/workflowManage/v0.5/isDeployed/{id}
   ```
 
 - 响应返回
@@ -300,7 +306,7 @@ GET /cyc/workflow/v0.5/isDeployed
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/copyWorkflow
+POST /cyc/workflowManage/v0.5/copyWorkflow
 
 - 请求参数
 
@@ -334,7 +340,7 @@ POST /cyc/workflow/v0.5/copyWorkflow
 
 - 请求地址
 
-GET /cyc/workflow/v0.5/verifyWorkflow
+GET /cyc/workflowManage/v0.5/verifyWorkflow
 
 - 请求参数
 
@@ -345,7 +351,7 @@ GET /cyc/workflow/v0.5/verifyWorkflow
 - 请求实例
 
   ```json
-  /cyc/workflow/v0.5/verifyWorkflow/{id}
+  /cyc/workflowManage/v0.5/verifyWorkflow/{id}
   ```
 
 - 响应返回
@@ -377,7 +383,7 @@ GET /cyc/workflow/v0.5/verifyWorkflow
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/executeWorkflow
+POST /cyc/workflowManage/v0.5/executeWorkflow
 
 - 请求参数
 
@@ -435,7 +441,7 @@ POST /cyc/workflow/v0.5/executeWorkflow
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/deployWorkflow
+POST /cyc/workflowManage/v0.5/deployWorkflow
 
 - 请求参数
 
@@ -469,7 +475,7 @@ POST /cyc/workflow/v0.5/deployWorkflow
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/updateWorkflowBase
+POST /cyc/workflowManage/v0.5/updateWorkflowBase
 
 - 请求参数
 
@@ -510,7 +516,7 @@ POST /cyc/workflow/v0.5/updateWorkflowBase
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/addTemplate
+POST /cyc/workflowManage/v0.5/addTemplate
 
 - 请求参数
 
@@ -549,7 +555,7 @@ POST /cyc/workflow/v0.5/addTemplate
 
 - **请求地址**
 
-GET /cyc/workflow/v0.5/templateList
+GET /cyc/workflowManage/v0.5/templateList
 
 - **请求参数**
 
@@ -562,7 +568,7 @@ GET /cyc/workflow/v0.5/templateList
 - **请求实例**
 
   ```json
-  /cyc/workflow/v0.5/templateList?pageNum=1&pageSize=10&templateType=1
+  /cyc/workflowManage/v0.5/templateList?pageNum=1&pageSize=10&templateType=1
   ```
 
 - **响应返回**
@@ -595,7 +601,7 @@ GET /cyc/workflow/v0.5/templateList
 
 - 请求地址
 
-DELETE /cyc/workflow/v0.5/deleteTemplate
+DELETE /cyc/workflowManage/v0.5/deleteTemplate
 
 - 请求参数
 
@@ -606,7 +612,7 @@ DELETE /cyc/workflow/v0.5/deleteTemplate
 - 请求实例
 
   ```json
-  /cyc/workflow/v0.5/deleteTemplate/{id}
+  /cyc/workflowManage/v0.5/deleteTemplate/{id}
   ```
 
 - 响应返回
@@ -629,7 +635,7 @@ DELETE /cyc/workflow/v0.5/deleteTemplate
 
 - 请求地址
 
-POST /cyc/workflow/v0.5/addGroup
+POST /cyc/workflowManage/v0.5/addGroup
 
 - 请求参数
 
@@ -663,7 +669,7 @@ POST /cyc/workflow/v0.5/addGroup
 
 - **请求地址**
 
-GET /cyc/workflow/v0.5/groupList
+GET /cyc/workflowManage/v0.5/groupList
 
 - **请求参数**
 
@@ -682,7 +688,7 @@ GET /cyc/workflow/v0.5/groupList
 {
   "code": 200,
   "msg": "查询成功",
-  "rows": [
+  "data": [
     {
       "id": 1001,
       "groupName": "分组",
@@ -704,7 +710,7 @@ GET /cyc/workflow/v0.5/groupList
 
 - **请求地址**
 
-POST /cyc/workflow/v0.5/workflowAddGroup
+POST /cyc/workflowManage/v0.5/workflowAddGroup
 
 - **请求参数**
 
@@ -740,7 +746,7 @@ POST /cyc/workflow/v0.5/workflowAddGroup
 
 - 请求地址
 
-DELETE /cyc/workflow/v0.5/deleteGroup
+DELETE /cyc/workflowManage/v0.5/deleteGroup
 
 - 请求参数
 
@@ -751,7 +757,7 @@ DELETE /cyc/workflow/v0.5/deleteGroup
 - 请求实例
 
   ```json
-  /cyc/workflow/v0.5/deleteGroup/{id}
+  /cyc/workflowManage/v0.5/deleteGroup/{id}
   ```
 
 - 响应返回

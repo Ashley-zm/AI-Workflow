@@ -203,8 +203,8 @@ const emit = defineEmits<{
 interface Property {
   name: string
   type: 'parameter' | 'image'
-  valueType: 'string' | 'number' | 'boolean' | 'array' | 'object'
-  defaultValue: string
+  valueType?: 'string' | 'number' | 'boolean' | 'array' | 'object' | undefined
+  defaultValue?: string | undefined
 }
 
 const config = ref<Property[]>([])
@@ -219,10 +219,8 @@ const initializeProperties = () => {
 
 const addProperty = () => {
   const newProperty: Property = {
-    name: '',
+    name: config.value.length > 0 ? 'img' + (config.value.length + 1) : 'img',
     type: 'image',
-    valueType: 'string',
-    defaultValue: '',
   }
   config.value.push(newProperty)
   updateProperties()
@@ -238,13 +236,13 @@ const onPropertyTypeChange = (property: Property) => {
     property.valueType = 'string'
     property.defaultValue = ''
   } else if (property.type === 'image') {
-    property.valueType = 'string'
-    property.defaultValue = ''
+    property.valueType = undefined
+    property.defaultValue = undefined
   }
   updateProperties()
 }
 
-const getDefaultValuePlaceholder = (valueType: string): string => {
+const getDefaultValuePlaceholder = (valueType: string | undefined): string => {
   switch (valueType) {
     case 'string':
       return '输入字符串默认值'

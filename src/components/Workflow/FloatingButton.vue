@@ -31,7 +31,6 @@ import AllNodeSelectors from './Nodes/AllNodeSelectors.vue'
 // 定义事件
 const emit = defineEmits<{
   dragStart: [event: DragEvent, type: string]
-  selectComponent: [componentType: string, handleInfo?: any]
 }>()
 
 // 状态管理

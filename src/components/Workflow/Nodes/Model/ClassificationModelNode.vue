@@ -8,8 +8,8 @@
       <Trash :size="14" />
     </div>
     <div
-      class="group relative w-[260px] bg-white rounded-xl border hover:border-blue-600 shadow transition-all"
-      :class="[selected ? `border-1 border-blue-600 shadow-xl` : `border-1 border-gray-200`]"
+      class="group relative w-[250px] bg-white rounded-xl border border-gray-200 shadow transition-all"
+      :class="[selected ? `shadow-xl` : `hover:shadow-xl`]"
     >
       <div class="flex items-center justify-between p-3 rounded-t-xl border-b border-gray-200">
         <div class="flex items-center gap-3">
@@ -43,7 +43,7 @@
         </el-tooltip>
       </div>
 
-      <div class="p-2 space-y-2">
+      <div class="p-2 space-y-2" v-if="selected">
         <div class="flex items-center justify-between p-1.5 rounded-lg border border-slate-100">
           <div class="flex items-center gap-2.5 flex-1 min-w-0">
             <div
@@ -54,12 +54,12 @@
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400 tracking-[1px]">图片</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ properties?.imagePath || '请选择图片...' }}
+                {{ properties?.images || '请选择图片...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.imagePath"
+            v-if="properties?.images"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -81,7 +81,7 @@
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400 tracking-[1px]">模型</div>
-              <div class="text-xs font-medium text-slate-600 truncate">
+              <div class="text-xs font-medium text-slate-500 truncate">
                 {{ properties?.model_name || '请选择模型...' }}
               </div>
             </div>
@@ -127,7 +127,6 @@ import { useWorkflowStore } from '@/stores/workflow'
 import { TriangleAlert, Trash, Image, Brain, CheckCircle, AlertCircle } from 'lucide-vue-next'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
-
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
@@ -159,7 +158,7 @@ const initializeProperties = () => {
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  if (!props.data?.config?.[0]?.imagePath) {
+  if (!props.data?.config?.[0]?.images) {
     TipContent.value = '请选择图片'
     isShowTip.value = true
   } else if (!props.data?.config?.[0]?.model_id) {

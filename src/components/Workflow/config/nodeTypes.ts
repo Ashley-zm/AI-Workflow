@@ -12,10 +12,10 @@ import LabelVisualizationNode from '@/components/Workflow/Nodes/Visualization/La
 import IfElseNode from '@/components/Workflow/Nodes/Conditional/IfElseNode.vue'
 import { nodeTypesList, getNodeType } from './nodeTypesData'
 
-export const allNodeTypes = {
+const allNodeTypes = {
   inputs: markRaw(InputNode),
   outputs: markRaw(OutputNode),
-  detection_model: markRaw(ObjectDetectionModelNode),
+  'detection_model@v1': markRaw(ObjectDetectionModelNode),
   classification_model: markRaw(ClassificationModelNode),
   segmentation_model: markRaw(SegmentationModelNode),
   bounding_box: markRaw(BoundingBoxVisualizationNode),
@@ -25,20 +25,9 @@ export const allNodeTypes = {
   switch_case: markRaw(IfElseNode),
 } as NodeTypesObject
 
-export { nodeTypesList, getNodeType }
+export { allNodeTypes, nodeTypesList, getNodeType }
 
-export const getNodeEdgeType = (type: string) => {
-  if (type === 'button')
-    return {
-      animated: true,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#5e5e5eff',
-      },
-      style: {
-        stroke: '#5e5e5eff',
-      },
-    }
+export const getNodeEdgeType = () => {
   return {
     animated: true,
     markerEnd: {

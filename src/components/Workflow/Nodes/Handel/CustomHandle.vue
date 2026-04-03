@@ -30,7 +30,9 @@
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
 import { ref, computed } from 'vue'
+import { useWorkflowStore } from '@/stores/workflow'
 
+const store = useWorkflowStore()
 const props = defineProps<{
   type: 'source' | 'target'
   position: Position
@@ -50,11 +52,11 @@ const handleClasses = computed(() => {
 })
 
 const handleClick = (event: MouseEvent) => {
-  console.log('CustomHandle点击事件:', props.nodeId, props.type)
+  console.log('CustomHandle点击事件:', props, event)
   if (props.type === 'target') {
     return
   }
+  store.setCurrentHandleInfo(props.nodeId, event)
   event.stopPropagation()
-  emit('handleClick', event, props.type, props.nodeId)
 }
 </script>

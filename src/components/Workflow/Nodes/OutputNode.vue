@@ -1,7 +1,7 @@
 <template>
   <div
-    class="group relative w-[260px] bg-white rounded-xl border hover:border-blue-600 shadow transition-all"
-    :class="[selected ? `border-1 border-blue-600 shadow-xl` : `border-1 border-gray-200`]"
+    class="group relative w-[250px] bg-white rounded-xl border border-gray-200 shadow transition-all"
+    :class="[selected ? `shadow-xl` : `hover:shadow-xl`]"
   >
     <div class="flex items-center justify-between p-3 rounded-t-xl border-b border-gray-200">
       <div class="flex items-center gap-3">

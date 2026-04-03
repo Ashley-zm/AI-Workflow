@@ -1,6 +1,6 @@
 <!-- 所有节点选择器 -->
 <template>
-  <div class="min-w-[260px] border-r border-slate-200 flex flex-col shadow-lg">
+  <div class="min-w-[250px] border-r border-slate-200 flex flex-col shadow-lg">
     <!-- 顶部标题和返回按钮 -->
     <div class="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
       <div

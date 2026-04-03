@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-[#f2f5f9] px-4 py-6 md:px-8">
-    <div class="mx-auto w-full max-w-[1280px]">
+  <div class="min-h-screen bg-[#ffffff] px-4 py-6 md:px-8">
+    <div class="mx-auto w-full">
       <header class="mb-5">
         <h1 class="text-2xl font-bold text-slate-900">工作流</h1>
       </header>
@@ -8,7 +8,7 @@
       <section
         class="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between"
       >
-        <div class="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
           <label
             class="flex w-full max-w-[420px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
           >
@@ -17,24 +17,32 @@
               v-model.trim="keyword"
               type="text"
               placeholder="请输入关键词搜索工作流名称、标签..."
-              class="w-full border-none bg-transparent text-sm text-slate-700 outline-none"
+              class="w-[250px] border-none bg-transparent text-sm text-slate-700 outline-none"
+              @keyup.enter="handleSearch"
             />
           </label>
-
-          <select
-            v-model="groupFilter"
-            class="h-[38px] min-w-[160px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+          <button
+            type="button"
+            class="inline-flex w-[180px] h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
+            @click="handleSearch"
           >
-            <option value="all">全部分组</option>
-            <option v-for="group in groups" :key="group" :value="group">
-              {{ group }}
-            </option>
-          </select>
+            <Search :size="14" />
+            搜索
+          </button>
+          <el-select v-model="groupFilter" class="min-w-[160px]" placeholder="请选择分组">
+            <el-option label="全部分组" value="all" />
+            <el-option
+              v-for="group in groupOptions"
+              :key="group.id"
+              :label="group.groupName"
+              :value="group.id"
+            />
+          </el-select>
 
           <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
             <button
               type="button"
-              class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm transition"
+              class="inline-flex h-8 w-[80px] items-center cursor-pointer gap-1 rounded-md px-3 text-sm transition"
               :class="
                 viewMode === 'card'
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -47,7 +55,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-sm transition"
+              class="inline-flex h-8 w-[80px] items-center cursor-pointer gap-1 rounded-md px-3 text-sm transition"
               :class="
                 viewMode === 'list'
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -64,7 +72,7 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
-            class="inline-flex h-9 items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
+            class="inline-flex h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
             @click="handleAddGroup"
           >
             <Plus :size="14" />
@@ -72,8 +80,8 @@
           </button>
           <button
             type="button"
-            class="inline-flex h-9 items-center gap-1 rounded-md bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
-            @click="openCreateDialog"
+            class="inline-flex h-9 items-center cursor-pointer gap-1 rounded-md bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+            @click="createDialogVisible = true"
           >
             <Plus :size="14" />
             创建工作流
@@ -81,9 +89,13 @@
         </div>
       </section>
 
-      <section v-if="viewMode === 'card'" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section
+        v-loading="workflowLoading"
+        v-if="viewMode === 'card'"
+        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+      >
         <article
-          v-for="item in filteredWorkflows"
+          v-for="item in workflowItems"
           :key="item.id"
           class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
@@ -104,17 +116,24 @@
               </div>
             </div>
             <div class="space-y-2 border-t border-slate-100 p-4">
-              <h2 class="line-clamp-1 text-[15px] font-semibold text-slate-900">{{ item.name }}</h2>
+              <h2 class="line-clamp-1 text-[15px] font-semibold text-slate-900">
+                {{ item.workflowName }}
+              </h2>
               <p class="inline-flex items-center gap-1 text-xs text-slate-500">
-                <MapPin :size="12" />
-                {{ item.location }}
+                <Tag :size="12" />
+                {{ item.groupLabel }}
               </p>
-              <p class="line-clamp-1 text-sm text-slate-600">{{ item.description }}</p>
+              <p class="line-clamp-1 text-sm text-slate-600">{{ item.description || '-' }}</p>
             </div>
           </button>
 
           <div class="absolute right-2 top-2">
-            <el-dropdown trigger="click" @command="onCardCommand($event, item)">
+            <el-dropdown
+              trigger="click"
+              :visible="activeActionMenuKey === `card-${item.id}`"
+              @visible-change="onCardActionMenuVisibleChange(item.id, $event)"
+              @command="onCardCommand($event, item)"
+            >
               <button
                 type="button"
                 class="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
@@ -126,7 +145,42 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="edit">编辑</el-dropdown-item>
                   <el-dropdown-item command="copy">复制</el-dropdown-item>
-                  <el-dropdown-item command="move">移动到分组</el-dropdown-item>
+                  <el-dropdown-item class="move-group-dropdown-item" @click.stop>
+                    <el-popover
+                      placement="right-start"
+                      trigger="hover"
+                      :width="180"
+                      popper-class="move-group-popover"
+                      v-if="activeActionMenuKey"
+                    >
+                      <template #reference>
+                        <div class="move-group-trigger">
+                          <span>移动到分组</span>
+                          <ChevronRight :size="14" />
+                        </div>
+                      </template>
+                      <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
+                      <div v-else-if="groupOptions.length" class="move-group-list">
+                        <div
+                          v-for="group in groupOptions"
+                          :key="`move-${item.id}-${group.id}`"
+                          class="move-group-option"
+                          @click.stop="handleMoveToGroup(item, group.id)"
+                        >
+                          <span class="truncate">{{ group.groupName }}</span>
+                          <button
+                            type="button"
+                            class="move-group-delete"
+                            title="删除分组"
+                            @click.stop="handleDeleteGroup(group.id)"
+                          >
+                            <X :size="12" />
+                          </button>
+                        </div>
+                      </div>
+                      <div v-else class="move-group-empty">暂无分组</div>
+                    </el-popover>
+                  </el-dropdown-item>
                   <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -137,7 +191,8 @@
 
       <section v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <el-table
-          :data="filteredWorkflows"
+          v-loading="workflowLoading"
+          :data="workflowItems"
           class="workflow-table"
           empty-text="暂无匹配的工作流"
           header-cell-class-name="workflow-table-header"
@@ -145,16 +200,21 @@
           <el-table-column label="工作流" min-width="280">
             <template #default="{ row }">
               <button type="button" class="workflow-name-button" @click="openEditor(row.id)">
-                <p class="truncate text-sm font-semibold text-slate-900">{{ row.name }}</p>
-                <p class="truncate text-xs text-slate-500">{{ row.description }}</p>
+                <p class="truncate text-sm font-semibold text-slate-900">{{ row.workflowName }}</p>
+                <p class="truncate text-xs text-slate-500">{{ row.description || '-' }}</p>
               </button>
             </template>
           </el-table-column>
-          <el-table-column prop="group" label="分组" min-width="140" />
+          <el-table-column prop="groupLabel" label="分组" min-width="140" />
           <el-table-column prop="updatedAt" label="更新时间" min-width="180" />
           <el-table-column label="操作" width="120" align="right">
             <template #default="{ row }">
-              <el-dropdown trigger="click" @command="onCardCommand($event, row)">
+              <el-dropdown
+                trigger="click"
+                :visible="activeActionMenuKey === `list-${row.id}`"
+                @visible-change="onListActionMenuVisibleChange(row.id, $event)"
+                @command="onCardCommand($event, row)"
+              >
                 <button
                   type="button"
                   class="rounded-md px-2 py-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
@@ -165,7 +225,42 @@
                   <el-dropdown-menu>
                     <el-dropdown-item command="edit">编辑</el-dropdown-item>
                     <el-dropdown-item command="copy">复制</el-dropdown-item>
-                    <el-dropdown-item command="move">移动到分组</el-dropdown-item>
+                    <el-dropdown-item class="move-group-dropdown-item" @click.stop>
+                      <el-popover
+                        placement="right-start"
+                        trigger="hover"
+                        :width="180"
+                        popper-class="move-group-popover"
+                        v-if="activeActionMenuKey"
+                      >
+                        <template #reference>
+                          <div class="move-group-trigger">
+                            <span>移动到分组</span>
+                            <ChevronRight :size="14" />
+                          </div>
+                        </template>
+                        <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
+                        <div v-else-if="groupOptions.length" class="move-group-list">
+                          <div
+                            v-for="group in groupOptions"
+                            :key="`move-${row.id}-${group.id}`"
+                            class="move-group-option"
+                            @click.stop="handleMoveToGroup(row, group.id)"
+                          >
+                            <span class="truncate">{{ group.groupName }}</span>
+                            <button
+                              type="button"
+                              class="move-group-delete"
+                              title="删除分组"
+                              @click.stop="handleDeleteGroup(group.id)"
+                            >
+                              <X :size="12" />
+                            </button>
+                          </div>
+                        </div>
+                        <div v-else class="move-group-empty">暂无分组</div>
+                      </el-popover>
+                    </el-dropdown-item>
                     <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -177,390 +272,310 @@
     </div>
   </div>
 
-  <el-dialog
+  <CreateWorkflowDialog
     v-model="createDialogVisible"
-    title="创建工作流"
-    min-width="60%"
-    destroy-on-close
-    class="workflow-create-dialog"
-  >
-    <div class="create-dialog-layout">
-      <aside class="template-side">
-        <div class="template-tabs">
-          <button
-            type="button"
-            class="template-tab"
-            :class="{ active: templateCategory === 'business' }"
-            @click="templateCategory = 'business'"
-          >
-            业务模板
-          </button>
-          <button
-            type="button"
-            class="template-tab"
-            :class="{ active: templateCategory === 'algorithm' }"
-            @click="templateCategory = 'algorithm'"
-          >
-            算法模板
-          </button>
-        </div>
-
-        <div class="template-list">
-          <article
-            v-for="template in visibleTemplates"
-            :key="template.id"
-            class="template-card"
-            :class="{ selected: selectedTemplateId === template.id }"
-            @click="selectedTemplateId = template.id"
-          >
-            <div class="template-card-toolbar">
-              <el-dropdown trigger="click" @command="onTemplateCommand($event, template)">
-                <button
-                  type="button"
-                  class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-slate-100"
-                  @click.stop
-                >
-                  <EllipsisVertical :size="14" />
-                </button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                    <el-dropdown-item command="delete">删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-            <div class="template-preview">
-              <div class="template-workflow-icon">
-                <span class="wf-node n1"></span>
-                <span class="wf-node n2"></span>
-                <span class="wf-node n3"></span>
-                <span class="wf-ring"></span>
-              </div>
-              <div class="template-mini-flow">
-                <div class="mini-node"></div>
-                <div class="mini-node"></div>
-                <div class="mini-node"></div>
-              </div>
-            </div>
-            <p class="template-title">{{ template.name }}</p>
-          </article>
-        </div>
-      </aside>
-
-      <main class="create-form">
-        <div class="form-item">
-          <label class="form-label"><span class="required">*</span>工作流名称</label>
-          <p class="form-hint">
-            支持中文、英文、数字、中划线、下划线、空格、点号，不能以下划线或空格开头
-          </p>
-          <el-input
-            v-model.trim="createForm.name"
-            placeholder="请输入"
-            maxlength="50"
-            @input="onWorkflowNameInput"
-          />
-        </div>
-
-        <div class="form-item">
-          <label class="form-label"><span class="required">*</span>工作流ID</label>
-          <p class="form-hint">根据工作流名称自动生成，可修改</p>
-          <el-input
-            v-model.trim="createForm.code"
-            placeholder="根据工作流名称自动生成，可修改"
-            maxlength="60"
-            @input="onWorkflowCodeInput"
-          />
-        </div>
-
-        <div class="form-item">
-          <label class="form-label"><span class="required">*</span>标签</label>
-          <p class="form-hint">添加自定义标签，如归属业主、地区等</p>
-          <div class="tag-row">
-            <el-tag
-              v-for="tag in createForm.tags"
-              :key="tag"
-              closable
-              class="workflow-tag"
-              @close="removeTag(tag)"
-            >
-              {{ tag }}
-            </el-tag>
-            <el-input
-              v-model.trim="tagInput"
-              class="tag-input"
-              placeholder="请输入标签，回车添加"
-              @keyup.enter="appendTag"
-            />
-          </div>
-        </div>
-
-        <div class="form-item">
-          <label class="form-label">描述：</label>
-          <el-input
-            v-model.trim="createForm.description"
-            type="textarea"
-            :rows="4"
-            maxlength="100"
-            show-word-limit
-            placeholder="请输入（简要描述工作流信息）"
-          />
-        </div>
-      </main>
-    </div>
-
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitCreateWorkflow">创建工作流</el-button>
-      </div>
-    </template>
-  </el-dialog>
+    :default-tag="defaultCreateTag"
+    @created="handleWorkflowCreated"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { EllipsisVertical, LayoutGrid, List, MapPin, Plus, Search } from 'lucide-vue-next'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  ChevronRight,
+  EllipsisVertical,
+  LayoutGrid,
+  List,
+  Tag,
+  Plus,
+  Search,
+  X,
+} from 'lucide-vue-next'
+import { groupApi, workflowApi } from '@/api'
+import type { WorkflowEntity, WorkflowListQuery } from '@/types'
+import CreateWorkflowDialog from '@/components/Workflow/CreateWorkflowDialog.vue'
 
 type ViewMode = 'card' | 'list'
-type CardCommand = 'edit' | 'copy' | 'move' | 'delete'
-type TemplateCommand = 'edit' | 'delete'
-type TemplateCategory = 'business' | 'algorithm'
+type CardCommand = 'edit' | 'copy' | 'delete'
 
-interface WorkflowItem {
+interface GroupOption {
   id: string
-  name: string
-  group: string
-  location: string
-  description: string
-  updatedAt: string
+  groupName: string
 }
 
-interface WorkflowTemplate {
+interface WorkflowViewItem extends WorkflowEntity {
   id: string
-  name: string
-  category: TemplateCategory
+  groupLabel: string
+  updatedAt: string
 }
 
 const router = useRouter()
 const keyword = ref('')
 const groupFilter = ref('all')
 const viewMode = ref<ViewMode>('card')
+const createDialogVisible = ref(false)
 
-const workflows = ref<WorkflowItem[]>([
-  {
-    id: 'wf-gas-scan-01',
-    name: '燃气灶具检测工作流',
-    group: '苏州港华',
-    location: '苏州港华',
-    description: '燃气灶具检测工作流配置',
-    updatedAt: '2026-04-02 13:40',
-  },
-  {
-    id: 'wf-gas-scan-02',
-    name: '燃气灶具检测工作流',
-    group: '深圳燃气',
-    location: '深圳燃气',
-    description: '燃气灶具检测工作流配置',
-    updatedAt: '2026-04-01 20:15',
-  },
-  {
-    id: 'wf-safety-03',
-    name: '入户安检识别工作流',
-    group: '重庆燃气',
-    location: '重庆燃气',
-    description: '检测安检照片中的关键动作和风险项',
-    updatedAt: '2026-03-30 09:10',
-  },
-])
+const pageNum = ref(1)
+const pageSize = ref(20)
 
-const templates = ref<WorkflowTemplate[]>([
-  { id: 'tpl-blank', name: '空白模板', category: 'business' },
-  { id: 'tpl-gas-tools', name: '灶具检测', category: 'business' },
-  { id: 'tpl-gas-wave', name: '波纹管检测', category: 'business' },
-  { id: 'tpl-detection', name: '目标检测', category: 'algorithm' },
-  { id: 'tpl-classify', name: '图像分类', category: 'algorithm' },
-])
+const workflowLoading = ref(false)
+const groupLoading = ref(false)
+const activeActionMenuKey = ref('')
+const workflows = ref<WorkflowEntity[]>([])
+const groups = ref<GroupOption[]>([])
 
-const groups = computed(() => [...new Set(workflows.value.map((item) => item.group))])
+const groupOptions = computed(() => groups.value)
 
-const filteredWorkflows = computed(() => {
-  const term = keyword.value.toLowerCase()
-  return workflows.value.filter((item) => {
-    const groupMatch = groupFilter.value === 'all' || item.group === groupFilter.value
-    if (!groupMatch) return false
-    if (!term) return true
-    return [item.name, item.group, item.location, item.description].some((text) =>
-      text.toLowerCase().includes(term),
-    )
+const groupMap = computed(() => {
+  return new Map(groupOptions.value.map((item) => [item.id, item.groupName]))
+})
+
+const defaultCreateTag = computed(() => {
+  if (groupFilter.value === 'all') return ''
+  return groupMap.value.get(groupFilter.value) ?? ''
+})
+
+const workflowItems = computed<WorkflowViewItem[]>(() => {
+  return workflows.value.map((item) => {
+    const groupId = item.workflowGroupId !== undefined ? String(item.workflowGroupId) : ''
+    const groupLabel = groupMap.value.get(groupId) || item.workflowClass || '未分组'
+    return {
+      ...item,
+      id: String(item.id),
+      groupLabel,
+      updatedAt: item.updateTime || item.createTime || '-',
+    }
   })
 })
 
-const createDialogVisible = ref(false)
-const templateCategory = ref<TemplateCategory>('business')
-const selectedTemplateId = ref('tpl-blank')
-const tagInput = ref('')
-const workflowCodeManualEdited = ref(false)
+const fetchWorkflowList = async () => {
+  workflowLoading.value = true
+  try {
+    const query: WorkflowListQuery = {
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
+    }
+    if (keyword.value) query.keyword = keyword.value
+    if (groupFilter.value !== 'all') query.groupId = groupFilter.value
 
-const createForm = reactive({
-  name: '',
-  code: '',
-  tags: ['徐州港华'],
-  description: '',
-})
+    const response = await workflowApi.getWorkflowList(query)
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '加载工作流失败')
+      return
+    }
 
-const visibleTemplates = computed(() =>
-  templates.value.filter((template) => template.category === templateCategory.value),
-)
-
-const activeTemplateName = computed(() => {
-  return (
-    templates.value.find((template) => template.id === selectedTemplateId.value)?.name ?? '空白模板'
-  )
-})
-
-const formatNow = () => {
-  const now = new Date()
-  const pad = (num: number) => String(num).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    workflows.value = response.rows || []
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('加载工作流失败，请稍后重试')
+  } finally {
+    workflowLoading.value = false
+  }
 }
 
-const normalizeWorkflowField = (value: string) => {
-  return value
-    .replace(/[^\u4e00-\u9fa5A-Za-z0-9_.\-\s]/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trimStart()
+const fetchGroups = async () => {
+  groupLoading.value = true
+  try {
+    const response = await groupApi.getGroupList()
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '加载分组失败')
+      return
+    }
+    groups.value = (response.data || []).map((item) => ({
+      id: String(item.id),
+      groupName: item.groupName,
+    }))
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('加载分组失败，请稍后重试')
+  } finally {
+    groupLoading.value = false
+  }
 }
 
-const validateWorkflowField = (value: string) =>
-  /^(?![_\s])[A-Za-z0-9\u4e00-\u9fa5_.\-\s]+$/.test(value)
+const handleActionMenuVisibleChange = (visible: boolean, menuKey: string) => {
+  if (visible) {
+    activeActionMenuKey.value = menuKey
+    void fetchGroups()
+    return
+  }
+  if (activeActionMenuKey.value === menuKey) {
+    activeActionMenuKey.value = ''
+  }
+}
+
+const closeActionMenu = () => {
+  activeActionMenuKey.value = ''
+}
+
+const onCardActionMenuVisibleChange = (id: string, visible: boolean) => {
+  handleActionMenuVisibleChange(visible, `card-${id}`)
+}
+
+const onListActionMenuVisibleChange = (id: string, visible: boolean) => {
+  handleActionMenuVisibleChange(visible, `list-${id}`)
+}
 
 const openEditor = (id: string) => {
   router.push(`/workflow/editor/${id}`)
 }
 
-const handleAddGroup = () => {
-  ElMessage.info('分组管理功能可在后端接口接入后扩展')
+const handleWorkflowCreated = async (workflowId: string) => {
+  await fetchWorkflowList()
+  openEditor(workflowId)
 }
 
-const openCreateDialog = () => {
-  createDialogVisible.value = true
-  templateCategory.value = 'business'
-  selectedTemplateId.value = 'tpl-blank'
-  workflowCodeManualEdited.value = false
-  createForm.name = ''
-  createForm.code = ''
-  createForm.tags = ['徐州港华']
-  createForm.description = ''
-  tagInput.value = ''
-}
-
-const onWorkflowNameInput = (value: string) => {
-  createForm.name = normalizeWorkflowField(value)
-}
-
-const onWorkflowCodeInput = (value: string) => {
-  workflowCodeManualEdited.value = true
-  createForm.code = normalizeWorkflowField(value)
-}
-
-watch(
-  () => createForm.name,
-  (value) => {
-    if (workflowCodeManualEdited.value) return
-    createForm.code = normalizeWorkflowField(value).replace(/\s+/g, '-').toLowerCase()
-  },
-)
-
-const appendTag = () => {
-  const nextTag = normalizeWorkflowField(tagInput.value).trim()
-  if (!nextTag) return
-  if (createForm.tags.includes(nextTag)) {
-    ElMessage.warning('标签已存在')
-    return
+const handleAddGroup = async () => {
+  try {
+    const promptResult = (await ElMessageBox.prompt('请输入分组名称', '添加分组', {
+      inputPlaceholder: '例如：苏州港华',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })) as { value?: string }
+    const groupName = (promptResult.value || '').trim()
+    if (!groupName) return
+    const response = await groupApi.addGroup({ groupName })
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '添加分组失败')
+      return
+    }
+    ElMessage.success('分组创建成功')
+    await fetchGroups()
+  } catch (error) {
+    if (String(error).includes('cancel')) return
+    console.error(error)
+    ElMessage.error('添加分组失败，请稍后重试')
   }
-  createForm.tags.push(nextTag)
-  tagInput.value = ''
 }
 
-const removeTag = (targetTag: string) => {
-  createForm.tags = createForm.tags.filter((tag) => tag !== targetTag)
+const handleMoveToGroup = async (item: WorkflowViewItem, groupId: string) => {
+  closeActionMenu()
+  const currentGroupId = item.workflowGroupId !== undefined ? String(item.workflowGroupId) : ''
+  if (currentGroupId === String(groupId)) return
+
+  try {
+    const response = await groupApi.workflowAddGroup({
+      workflowId: item.id,
+      groupId: String(groupId),
+    })
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '移动失败')
+      return
+    }
+    ElMessage.success('移动成功')
+    await fetchWorkflowList()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('移动失败，请稍后重试')
+  }
 }
 
-const submitCreateWorkflow = () => {
-  if (!createForm.name) {
-    ElMessage.error('请填写工作流名称')
-    return
-  }
-  if (!validateWorkflowField(createForm.name)) {
-    ElMessage.error('工作流名称格式不正确')
-    return
-  }
-  if (!createForm.code) {
-    ElMessage.error('请填写工作流ID')
-    return
-  }
-  if (!validateWorkflowField(createForm.code)) {
-    ElMessage.error('工作流ID格式不正确')
-    return
-  }
-  if (createForm.tags.length === 0) {
-    ElMessage.error('请至少添加一个标签')
-    return
-  }
+const handleDeleteGroup = async (groupId: string) => {
+  closeActionMenu()
+  try {
+    await ElMessageBox.confirm(
+      '确认删除该分组？删除后，该分组所有工作流将归属到【未分组】！',
+      '删除分组',
+      {
+        type: 'warning',
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+      },
+    )
+    const response = await groupApi.deleteGroup(String(groupId))
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '删除分组失败')
+      return
+    }
 
-  const id = `wf-${Date.now()}`
-  workflows.value.unshift({
-    id,
-    name: createForm.name,
-    group: createForm.tags[0] ?? '未分组',
-    location: createForm.tags[0] ?? '未设置',
-    description: createForm.description || `由 ${activeTemplateName.value} 创建`,
-    updatedAt: formatNow(),
-  })
+    if (groupFilter.value === String(groupId)) {
+      groupFilter.value = 'all'
+    }
 
-  createDialogVisible.value = false
-  ElMessage.success('工作流创建成功')
-  openEditor(id)
+    ElMessage.success('删除分组成功')
+    await Promise.all([fetchGroups(), fetchWorkflowList()])
+  } catch (error) {
+    if (String(error).includes('cancel')) return
+    console.error(error)
+    ElMessage.error('删除分组失败，请稍后重试')
+  }
 }
+const onCardCommand = async (
+  command: string | number | Record<string, unknown>,
+  item: WorkflowViewItem,
+) => {
+  const action = String(command ?? '') as CardCommand | ''
 
-const onCardCommand = (command: string | number | Record<string, unknown>, item: WorkflowItem) => {
-  const action = String(command) as CardCommand
   if (action === 'edit') {
     openEditor(item.id)
     return
   }
+
   if (action === 'copy') {
-    workflows.value.unshift({
-      ...item,
-      id: `wf-copy-${Date.now()}`,
-      name: `${item.name}（副本）`,
-      updatedAt: formatNow(),
+    try {
+      const response = await workflowApi.copyWorkflow(item.id)
+      if (response.code !== 200) {
+        ElMessage.error(response.msg || '复制失败')
+        return
+      }
+      ElMessage.success('复制成功')
+      await fetchWorkflowList()
+    } catch (error) {
+      console.error(error)
+      ElMessage.error('复制失败，请稍后重试')
+    }
+    return
+  }
+
+  if (action !== 'delete') {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确认删除工作流「${item.workflowName}」吗？`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
     })
-    ElMessage.success('已复制工作流')
-    return
+    const response = await workflowApi.deleteWorkflow(item.id)
+    if (response.code !== 200) {
+      ElMessage.error(response.msg || '删除失败')
+      return
+    }
+    ElMessage.success('删除成功')
+    await fetchWorkflowList()
+  } catch (error) {
+    if (String(error).includes('cancel')) return
+    console.error(error)
+    ElMessage.error('删除失败，请稍后重试')
   }
-  if (action === 'move') {
-    ElMessage.info(`“${item.name}”移动分组功能待接入`)
-    return
-  }
-  workflows.value = workflows.value.filter((workflow) => workflow.id !== item.id)
-  ElMessage.success('已删除工作流')
 }
 
-const onTemplateCommand = (
-  command: string | number | Record<string, unknown>,
-  template: WorkflowTemplate,
-) => {
-  const action = String(command) as TemplateCommand
-  if (action === 'edit') {
-    ElMessage.info(`“${template.name}”模板编辑功能待接入`)
-    return
-  }
-  ElMessage.info(`“${template.name}”模板删除功能待接入`)
+let queryTimer: ReturnType<typeof setTimeout> | undefined
+
+const handleSearch = () => {
+  if (queryTimer) clearTimeout(queryTimer)
+  pageNum.value = 1
+  fetchWorkflowList()
 }
+
+watch([keyword, groupFilter], () => {
+  if (queryTimer) clearTimeout(queryTimer)
+  queryTimer = setTimeout(() => {
+    pageNum.value = 1
+    fetchWorkflowList()
+  }, 300)
+})
+
+onMounted(async () => {
+  await Promise.all([fetchGroups(), fetchWorkflowList()])
+})
+
+onUnmounted(() => {
+  if (queryTimer) clearTimeout(queryTimer)
+})
 </script>
 
 <style scoped>
@@ -590,6 +605,59 @@ const onTemplateCommand = (
   text-align: left;
 }
 
+:deep(.move-group-popover) {
+  padding: 8px;
+}
+
+.move-group-trigger {
+  display: flex;
+  min-width: 150px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.move-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.move-group-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.move-group-option:hover {
+  background: #f1f5f9;
+}
+
+.move-group-delete {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.move-group-delete:hover {
+  color: #ef4444;
+}
+
+.move-group-empty {
+  min-width: 150px;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
 :deep(.workflow-table .el-table__cell) {
   padding-top: 10px;
   padding-bottom: 10px;
@@ -599,254 +667,5 @@ const onTemplateCommand = (
   background: #f8fafc !important;
   color: #334155;
   font-weight: 600;
-}
-
-:deep(.workflow-create-dialog) {
-  margin-top: 0 !important;
-}
-
-:deep(.workflow-create-dialog .el-dialog) {
-  max-width: 1060px;
-  border-radius: 10px;
-}
-
-:deep(.workflow-create-dialog .el-dialog__header) {
-  margin-right: 0;
-  border-bottom: 1px solid #d9e2ef;
-  padding: 14px 18px;
-}
-
-:deep(.workflow-create-dialog .el-dialog__title) {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-}
-
-:deep(.workflow-create-dialog .el-dialog__body) {
-  padding: 0;
-}
-
-:deep(.workflow-create-dialog .el-dialog__footer) {
-  border-top: 1px solid #d9e2ef;
-  padding: 12px 16px;
-}
-
-.create-dialog-layout {
-  display: grid;
-  grid-template-columns: 288px 1fr;
-  min-height: 520px;
-}
-
-.template-side {
-  border-right: 1px solid #d9e2ef;
-  background: #fcfdff;
-  padding: 14px 16px;
-}
-
-.template-tabs {
-  margin-bottom: 12px;
-  display: inline-flex;
-  border-radius: 6px;
-  background: #f3f6fa;
-  padding: 2px;
-}
-
-.template-tab {
-  min-width: 92px;
-  border: none;
-  background: transparent;
-  border-radius: 5px;
-  height: 30px;
-  font-size: 13px;
-  color: #6b7280;
-  cursor: pointer;
-}
-
-.template-tab.active {
-  background: #e8f1ff;
-  color: #2563eb;
-  font-weight: 600;
-}
-
-.template-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.template-card {
-  border: 1px solid #cfdbea;
-  border-radius: 8px;
-  background: #fff;
-  padding: 10px 12px 12px;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
-}
-
-.template-card.selected {
-  border-color: #4f9dff;
-  box-shadow: 0 0 0 1px #4f9dff;
-}
-
-.template-card-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.template-preview {
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.template-workflow-icon {
-  position: relative;
-  width: 88px;
-  height: 68px;
-  flex-shrink: 0;
-}
-
-.wf-ring {
-  position: absolute;
-  left: 20px;
-  top: 15px;
-  width: 46px;
-  height: 46px;
-  border: 6px solid #c8d8f5;
-  border-radius: 999px;
-}
-
-.wf-node {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: #3b82f6;
-  border: 4px solid #dce8ff;
-}
-
-.wf-node::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 5px;
-  width: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: white;
-}
-
-.wf-node.n1 {
-  left: 34px;
-  top: 0;
-}
-
-.wf-node.n2 {
-  left: 8px;
-  top: 36px;
-}
-
-.wf-node.n3 {
-  left: 60px;
-  top: 36px;
-}
-
-.template-mini-flow {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.mini-node {
-  width: 100%;
-  height: 12px;
-  border-radius: 4px;
-  border: 1px solid #d6deea;
-  background: #fff;
-}
-
-.template-title {
-  margin-top: 10px;
-  text-align: center;
-  font-size: 20px;
-  line-height: 1;
-  transform: scale(0.66);
-  transform-origin: center top;
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.create-form {
-  padding: 18px 14px 6px 12px;
-}
-
-.form-item {
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.required {
-  margin-right: 2px;
-  color: #ef4444;
-}
-
-.form-hint {
-  margin-bottom: 7px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.tag-input {
-  width: 200px;
-}
-
-.workflow-tag {
-  border-color: #ffd8a8;
-  background: #fff3e0;
-  color: #92400e;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-@media (max-width: 1024px) {
-  .create-dialog-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .template-side {
-    border-right: 0;
-    border-bottom: 1px solid #d9e2ef;
-  }
-
-  .template-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .template-list {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
