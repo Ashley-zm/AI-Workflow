@@ -223,7 +223,7 @@ GET /cyc/workflowManage/v0.5/list
       "workflowClass": "检测,视觉",
       "description": "用于燃气灶具检测",
       "workflowJsonData": "",
-      "workflowGroupId": 1,
+      "workflowGroup": 1,
       "createTime": "2026-03-25 11:00:00",
       "createBy": 1,
       "updateTime": "2026-03-25 11:10:00",

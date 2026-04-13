@@ -7,7 +7,6 @@ export const nodeTypesList = [
     color: 'gray',
     type: 'inputs',
     nodeTag: 'inputs',
-    config: [],
   },
   {
     name: 'Outputs',
@@ -17,7 +16,6 @@ export const nodeTypesList = [
     color: 'gray',
     type: 'outputs',
     nodeTag: 'outputs',
-    config: [],
   },
   {
     name: 'Model',
@@ -27,22 +25,22 @@ export const nodeTypesList = [
     color: 'blue',
     children: [
       {
-        name: 'Detection_Model',
+        name: 'detect',
         type: 'detection_model@v1',
         description: '目标检测模型',
         icon: 'Brain',
         color: 'blue',
-        nodeTag: 'model',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions'],
       },
       {
         name: 'Classification_Model',
-        type: 'classification_model',
+        type: 'classification_model@v1',
         description: '图像分类模型',
         icon: 'Filter',
         color: 'blue',
-        nodeTag: 'model',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions'],
       },
       {
         name: 'Segmentation_Model',
@@ -50,8 +48,8 @@ export const nodeTypesList = [
         description: '图像分割模型',
         icon: 'Crop',
         color: 'blue',
-        nodeTag: 'model',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions'],
       },
     ],
   },
@@ -64,12 +62,12 @@ export const nodeTypesList = [
     children: [
       {
         name: 'Bounding_Box',
-        type: 'bounding_box',
+        type: 'bounding_box_visualization@v1',
         description: '检测的物体周围画一个方框',
         icon: 'VectorSquare',
         color: 'purple',
-        nodeTag: 'visualization',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions', 'image'],
       },
       {
         name: 'Polygon_Visualization',
@@ -77,8 +75,8 @@ export const nodeTypesList = [
         description: '检测的物体周围画一个多边形',
         icon: 'VectorSquare',
         color: 'purple',
-        nodeTag: 'visualization',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions', 'image'],
       },
       {
         name: 'Label_Visualization',
@@ -86,8 +84,8 @@ export const nodeTypesList = [
         description: '检测的物体上画标签',
         icon: 'Tag',
         color: 'purple',
-        nodeTag: 'visualization',
-        config: [],
+        nodeTag: 'steps',
+        outputs: ['predictions', 'image'],
       },
     ],
   },
@@ -104,8 +102,7 @@ export const nodeTypesList = [
         description: '根据布尔条件在两个分支间路由',
         icon: 'Filter',
         color: 'orange',
-        nodeTag: 'conditional_branch',
-        config: [],
+        nodeTag: 'steps',
       },
       {
         name: 'Switch_Case',
@@ -113,14 +110,16 @@ export const nodeTypesList = [
         description: '根据字段值路由到多个分支',
         icon: 'Route',
         color: 'orange',
-        nodeTag: 'conditional_branch',
-        config: [],
+        nodeTag: 'steps',
       },
     ],
   },
 ]
 
-export const getNodeType = (type: string) => {
+export const getNodeType = (type: string | undefined) => {
+  if (!type) {
+    return null
+  }
   const findNodeType: (items: any[], type: string) => any = (items: any[], type: string) => {
     for (const item of items) {
       if (item.children) {
@@ -133,4 +132,22 @@ export const getNodeType = (type: string) => {
     return null
   }
   return findNodeType(nodeTypesList, type)
+}
+
+export const getOutputsByType = (type: string | undefined): string[] => {
+  const nodeType = getNodeType(type)
+  const outputs = nodeType?.outputs
+  if (!Array.isArray(outputs)) {
+    return []
+  }
+
+  return outputs
+    .map((item: any) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') {
+        return item.value || item.name || item.key || ''
+      }
+      return ''
+    })
+    .filter((item: string) => typeof item === 'string' && item.length > 0)
 }

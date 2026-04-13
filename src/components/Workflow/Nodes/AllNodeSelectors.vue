@@ -1,8 +1,8 @@
 <!-- 所有节点选择器 -->
 <template>
-  <div class="min-w-[250px] border-r border-slate-200 flex flex-col shadow-lg">
+  <div class="min-w-[250px] border rounded-xl border-slate-100 flex flex-col shadow-lg">
     <!-- 顶部标题和返回按钮 -->
-    <div class="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
+    <div class="p-3 bg-white border-b border-slate-100 flex items-center justify-between">
       <div
         v-if="currentLevel === 'children' && selectedParent"
         class="flex items-center gap-2 text-slate-500 cursor-pointer hover:text-blue-500"
@@ -11,7 +11,7 @@
         <ChevronLeft :size="18" />
         <span class="font-medium">返回</span>
       </div>
-      <div class="text-slate-700 font-bold text-center flex-1 text-lg">
+      <div class="text-slate-600 font-bold text-center flex-1 text-md">
         {{ currentLevel === 'children' && selectedParent ? selectedParent.name : '选择工作流节点' }}
       </div>
 

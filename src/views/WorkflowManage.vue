@@ -1,35 +1,15 @@
 <template>
   <div class="min-h-screen bg-[#ffffff] px-4 py-6 md:px-8">
     <div class="mx-auto w-full">
-      <header class="mb-5">
+      <!-- <header class="mb-5">
         <h1 class="text-2xl font-bold text-slate-900">工作流</h1>
-      </header>
+      </header> -->
 
       <section
         class="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
-          <label
-            class="flex w-full max-w-[420px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-          >
-            <Search :size="16" class="text-slate-400" />
-            <input
-              v-model.trim="keyword"
-              type="text"
-              placeholder="请输入关键词搜索工作流名称、标签..."
-              class="w-[250px] border-none bg-transparent text-sm text-slate-700 outline-none"
-              @keyup.enter="handleSearch"
-            />
-          </label>
-          <button
-            type="button"
-            class="inline-flex w-[180px] h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
-            @click="handleSearch"
-          >
-            <Search :size="14" />
-            搜索
-          </button>
-          <el-select v-model="groupFilter" class="min-w-[160px]" placeholder="请选择分组">
+          <el-select v-model="groupFilter" class="min-w-[150px]" placeholder="请选择分组">
             <el-option label="全部分组" value="all" />
             <el-option
               v-for="group in groupOptions"
@@ -38,6 +18,26 @@
               :value="group.id"
             />
           </el-select>
+          <label
+            class="flex w-full max-w-[420px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+          >
+            <Search :size="16" class="text-slate-400" />
+            <input
+              v-model.trim="keyword"
+              type="text"
+              placeholder="请输入关键词搜索工作流名称、标签..."
+              class="min-w-[250px] border-none bg-transparent text-sm text-slate-700 outline-none"
+              @keyup.enter="handleSearch"
+            />
+          </label>
+          <button
+            type="button"
+            class="inline-flex min-w-[80px] h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
+            @click="handleSearch"
+          >
+            <Search :size="14" />
+            搜索
+          </button>
 
           <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
             <button
@@ -72,7 +72,7 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
-            class="inline-flex h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
+            class="inline-flex min-w-[100px] h-9 items-center cursor-pointer gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
             @click="handleAddGroup"
           >
             <Plus :size="14" />
@@ -80,7 +80,7 @@
           </button>
           <button
             type="button"
-            class="inline-flex h-9 items-center cursor-pointer gap-1 rounded-md bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+            class="inline-flex min-w-[120px] h-9 items-center cursor-pointer gap-1 rounded-md bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
             @click="createDialogVisible = true"
           >
             <Plus :size="14" />
@@ -89,10 +89,16 @@
         </div>
       </section>
 
+      <el-empty
+        class="w-full h-full"
+        v-if="viewMode === 'card' && workflowItems.length === 0"
+        description="暂无工作流"
+      >
+      </el-empty>
       <section
         v-loading="workflowLoading"
         v-if="viewMode === 'card'"
-        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
       >
         <article
           v-for="item in workflowItems"
@@ -116,14 +122,25 @@
               </div>
             </div>
             <div class="space-y-2 border-t border-slate-100 p-4">
-              <h2 class="line-clamp-1 text-[15px] font-semibold text-slate-900">
-                {{ item.workflowName }}
-              </h2>
+              <div class="flex items-center gap-2">
+                <span class="line-clamp-1 text-[14px] font-bold text-slate-700">
+                  {{ item.workflowName }}
+                </span>
+                <el-tag type="primary" v-if="item.groupLabel != '未分组'">
+                  {{ item.groupLabel }}
+                </el-tag>
+              </div>
               <p class="inline-flex items-center gap-1 text-xs text-slate-500">
-                <Tag :size="12" />
-                {{ item.groupLabel }}
+                <span
+                  class="inline-flex items-center gap-1 text-xs text-slate-500 border border-slate-200 rounded-md px-2 py-1.5"
+                  v-for="tag in item.workflowClass.split(',')"
+                  :key="tag"
+                >
+                  <Tag :size="12" />
+                  {{ tag }}
+                </span>
               </p>
-              <p class="line-clamp-1 text-sm text-slate-600">{{ item.description || '-' }}</p>
+              <p class="line-clamp-1 text-xs text-slate-600">{{ item.description || '-' }}</p>
             </div>
           </button>
 
@@ -143,8 +160,8 @@
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                  <el-dropdown-item command="copy">复制</el-dropdown-item>
+                  <el-dropdown-item command="edit"> 编辑 </el-dropdown-item>
+                  <el-dropdown-item command="copy"> 复制 </el-dropdown-item>
                   <el-dropdown-item class="move-group-dropdown-item" @click.stop>
                     <el-popover
                       placement="right-start"
@@ -181,7 +198,7 @@
                       <div v-else class="move-group-empty">暂无分组</div>
                     </el-popover>
                   </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided> 删除 </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -197,74 +214,92 @@
           empty-text="暂无匹配的工作流"
           header-cell-class-name="workflow-table-header"
         >
-          <el-table-column label="工作流" min-width="280">
+          <el-table-column prop="workflowName" label="工作流名称" min-width="280">
             <template #default="{ row }">
-              <button type="button" class="workflow-name-button" @click="openEditor(row.id)">
-                <p class="truncate text-sm font-semibold text-slate-900">{{ row.workflowName }}</p>
-                <p class="truncate text-xs text-slate-500">{{ row.description || '-' }}</p>
-              </button>
+              <p class="text-[#409eff] cursor-pointer" @click="openEditor(row.id)">
+                {{ row.workflowName }}
+              </p>
             </template>
           </el-table-column>
-          <el-table-column prop="groupLabel" label="分组" min-width="140" />
-          <el-table-column prop="updatedAt" label="更新时间" min-width="180" />
-          <el-table-column label="操作" width="120" align="right">
+          <el-table-column prop="workflowClass" label="标签" min-width="140">
             <template #default="{ row }">
-              <el-dropdown
-                trigger="click"
-                :visible="activeActionMenuKey === `list-${row.id}`"
-                @visible-change="onListActionMenuVisibleChange(row.id, $event)"
-                @command="onCardCommand($event, row)"
+              <el-tag
+                class="mr-1"
+                type="primary"
+                v-for="tag in row.workflowClass.split(',')"
+                :key="tag"
               >
-                <button
-                  type="button"
-                  class="rounded-md px-2 py-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                {{ tag }}
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="groupLabel" label="分组" min-width="180">
+            <template #default="{ row }">
+              {{ row.groupLabel === '未分组' ? '-' : row.groupLabel }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="description" label="描述" min-width="180" />
+          <el-table-column label="操作" width="340">
+            <template #default="{ row }">
+              <div class="list-action-bar">
+                <el-button
+                  type="primary"
+                  link
+                  :icon="Edit"
+                  title="编辑"
+                  @click="onCardCommand('edit', row)"
                 >
-                  操作
-                </button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                    <el-dropdown-item command="copy">复制</el-dropdown-item>
-                    <el-dropdown-item class="move-group-dropdown-item" @click.stop>
-                      <el-popover
-                        placement="right-start"
-                        trigger="hover"
-                        :width="180"
-                        popper-class="move-group-popover"
-                        v-if="activeActionMenuKey"
+                </el-button>
+                <el-button
+                  type="primary"
+                  link
+                  @click="onCardCommand('copy', row)"
+                  :icon="Copy"
+                  title="复制"
+                ></el-button>
+
+                <el-popover
+                  placement="right-start"
+                  trigger="click"
+                  :width="180"
+                  popper-class="move-group-popover"
+                  @show="onListMoveGroupVisibleChange(true)"
+                >
+                  <template #reference>
+                    <el-button type="primary" link :icon="Group" title="移动分组"></el-button>
+                  </template>
+                  <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
+                  <div v-else-if="groupOptions.length" class="move-group-list">
+                    <div
+                      v-for="group in groupOptions"
+                      :key="`move-${row.id}-${group.id}`"
+                      class="move-group-option"
+                      @click.stop="handleMoveToGroup(row, group.id)"
+                    >
+                      <span class="truncate">{{ group.groupName }}</span>
+                      <el-button
+                        type="primary"
+                        link
+                        :icon="X"
+                        title="删除分组"
+                        @click.stop="handleDeleteGroup(group.id)"
                       >
-                        <template #reference>
-                          <div class="move-group-trigger">
-                            <span>移动到分组</span>
-                            <ChevronRight :size="14" />
-                          </div>
-                        </template>
-                        <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
-                        <div v-else-if="groupOptions.length" class="move-group-list">
-                          <div
-                            v-for="group in groupOptions"
-                            :key="`move-${row.id}-${group.id}`"
-                            class="move-group-option"
-                            @click.stop="handleMoveToGroup(row, group.id)"
-                          >
-                            <span class="truncate">{{ group.groupName }}</span>
-                            <button
-                              type="button"
-                              class="move-group-delete"
-                              title="删除分组"
-                              @click.stop="handleDeleteGroup(group.id)"
-                            >
-                              <X :size="12" />
-                            </button>
-                          </div>
-                        </div>
-                        <div v-else class="move-group-empty">暂无分组</div>
-                      </el-popover>
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+                      </el-button>
+                    </div>
+                  </div>
+                  <div v-else class="move-group-empty">暂无分组</div>
+                </el-popover>
+
+                <el-button
+                  type="primary"
+                  link
+                  :icon="Trash2"
+                  title="删除"
+                  @click="onCardCommand('delete', row)"
+                >
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -276,6 +311,11 @@
     v-model="createDialogVisible"
     :default-tag="defaultCreateTag"
     @created="handleWorkflowCreated"
+  />
+  <EditWorkflowBaseDialog
+    v-model="editDialogVisible"
+    :workflow-id="editingWorkflowId"
+    @updated="handleWorkflowBaseUpdated"
   />
 </template>
 
@@ -292,10 +332,15 @@ import {
   Plus,
   Search,
   X,
+  Edit,
+  Copy,
+  Trash2,
+  Group,
 } from 'lucide-vue-next'
 import { groupApi, workflowApi } from '@/api'
-import type { WorkflowEntity, WorkflowListQuery } from '@/types'
+import type { WorkflowEntity, WorkflowListQuery } from '@/types/workflow-api'
 import CreateWorkflowDialog from '@/components/Workflow/CreateWorkflowDialog.vue'
+import EditWorkflowBaseDialog from '@/components/Workflow/EditWorkflowBaseDialog.vue'
 
 type ViewMode = 'card' | 'list'
 type CardCommand = 'edit' | 'copy' | 'delete'
@@ -316,6 +361,8 @@ const keyword = ref('')
 const groupFilter = ref('all')
 const viewMode = ref<ViewMode>('card')
 const createDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const editingWorkflowId = ref('')
 
 const pageNum = ref(1)
 const pageSize = ref(20)
@@ -339,12 +386,16 @@ const defaultCreateTag = computed(() => {
 
 const workflowItems = computed<WorkflowViewItem[]>(() => {
   return workflows.value.map((item) => {
-    const groupId = item.workflowGroupId !== undefined ? String(item.workflowGroupId) : ''
-    const groupLabel = groupMap.value.get(groupId) || item.workflowClass || '未分组'
+    const groupId = item.workflowGroup !== undefined ? String(item.workflowGroup) : ''
+    console.log('groupMap', groupMap.value)
+    console.log(groupId)
+
+    const groupLabel = groupMap.value.get(groupId) || '未分组'
     return {
       ...item,
       id: String(item.id),
       groupLabel,
+      workflowClass: item.workflowClass || '',
       updatedAt: item.updateTime || item.createTime || '-',
     }
   })
@@ -418,13 +469,28 @@ const onListActionMenuVisibleChange = (id: string, visible: boolean) => {
   handleActionMenuVisibleChange(visible, `list-${id}`)
 }
 
+const onListMoveGroupVisibleChange = (visible: boolean) => {
+  if (!visible) return
+  void fetchGroups()
+}
+
 const openEditor = (id: string) => {
   router.push(`/workflow/editor/${id}`)
+}
+
+const openEditDialog = (id: string) => {
+  editingWorkflowId.value = id
+  editDialogVisible.value = true
+  closeActionMenu()
 }
 
 const handleWorkflowCreated = async (workflowId: string) => {
   await fetchWorkflowList()
   openEditor(workflowId)
+}
+
+const handleWorkflowBaseUpdated = async () => {
+  await fetchWorkflowList()
 }
 
 const handleAddGroup = async () => {
@@ -452,7 +518,7 @@ const handleAddGroup = async () => {
 
 const handleMoveToGroup = async (item: WorkflowViewItem, groupId: string) => {
   closeActionMenu()
-  const currentGroupId = item.workflowGroupId !== undefined ? String(item.workflowGroupId) : ''
+  const currentGroupId = item.workflowGroup !== undefined ? String(item.workflowGroup) : ''
   if (currentGroupId === String(groupId)) return
 
   try {
@@ -509,7 +575,7 @@ const onCardCommand = async (
   const action = String(command ?? '') as CardCommand | ''
 
   if (action === 'edit') {
-    openEditor(item.id)
+    openEditDialog(item.id)
     return
   }
 
@@ -579,6 +645,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+* {
+  font-family: 'auto';
+}
 .preview-flow {
   display: flex;
   flex-direction: column;
@@ -603,6 +672,41 @@ onUnmounted(() => {
 .workflow-name-button {
   width: 100%;
   text-align: left;
+}
+
+.list-action-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.list-action-btn {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.list-action-btn:hover {
+  background: #f1f5f9;
+  color: #276cff;
+}
+
+.list-action-btn.danger {
+  color: #d81c1c;
+}
+
+.list-action-btn.danger:hover {
+  /* background: #fef2f2; */
+  color: rgb(233, 36, 36);
 }
 
 :deep(.move-group-popover) {
@@ -659,13 +763,13 @@ onUnmounted(() => {
 }
 
 :deep(.workflow-table .el-table__cell) {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 14px 15px;
 }
 
 :deep(.workflow-table-header) {
   background: #f8fafc !important;
-  color: #334155;
+  color: #64748b;
   font-weight: 600;
+  font-size: 13px;
 }
 </style>

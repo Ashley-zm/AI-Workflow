@@ -2,7 +2,7 @@
 export interface ApiResponse<T = unknown> {
   code: number
   msg: string
-  data: T
+  data?: T
 }
 
 // 列表查询响应结构
@@ -16,13 +16,13 @@ export interface ApiListResponse<T> {
 
 // 工作流实体
 export interface WorkflowEntity {
-  id: string | number
+  id: string | undefined
   workflowName: string
   workflowId: string
   workflowClass: string
   description?: string
-  workflowJsonData?: string
-  workflowGroupId?: string | number
+  workflowJsonData?: any
+  workflowGroup?: string | number
   createTime?: string
   createBy?: string | number
   updateTime?: string
@@ -36,7 +36,7 @@ export interface AddOrUpdateWorkflowRequest {
   workflowId: string
   workflowClass: string
   description?: string
-  workflowJsonData: string
+  workflowJsonData?: any
 }
 
 // 工作流列表查询参数
@@ -58,7 +58,7 @@ export interface VerifyWorkflowResult {
 // 执行工作流请求参数
 export interface ExecuteWorkflowRequest {
   workflowId: string
-  image: string
+  inputJson: any
 }
 
 // 检测结果基础结构
@@ -70,17 +70,22 @@ export interface DetectionResult {
 
 // 执行工作流返回结果
 export interface ExecuteWorkflowResult {
-  execution_id: string
-  workflow_id: string
-  status: string
-  results: {
-    detections?: DetectionResult[]
-    annotated_image?: string
-    [key: string]: unknown
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+  executeResult: {
+    execution_id: string
+    workflow_id: string
+    status: string
+    results: {
+      detections?: DetectionResult[]
+      annotated_image?: string
+      [key: string]: unknown
+    }
+    execution_time_ms: number
+    started_at: string
+    completed_at: string
   }
-  execution_time_ms: number
-  started_at: string
-  completed_at: string
 }
 
 // 更新工作流基础信息请求
@@ -99,7 +104,7 @@ export interface TemplateEntity {
   id: string | number
   templateType: TemplateType | number
   templateName: string
-  templateJsonData: string | Record<string, unknown>
+  templateJsonData?: any
   createTime?: string
   createBy?: string | number
   updateTime?: string
@@ -111,7 +116,7 @@ export interface AddOrUpdateTemplateRequest {
   id?: string
   templateType: TemplateType
   templateName: string
-  templateJsonData: string
+  templateJsonData?: any
 }
 
 // 模板列表查询参数
@@ -172,5 +177,5 @@ export interface StartBusinessServiceRequest {
 export interface ModelServiceListQuery {
   pageNum: number
   pageSize: number
-  algorithmTypeDictId: string
+  algorithmTypeDictId: string // 算法类型：detection、classification、segmentation
 }

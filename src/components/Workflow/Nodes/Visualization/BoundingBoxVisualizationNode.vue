@@ -54,12 +54,12 @@
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400">图片属性</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ properties?.images || '请选择图片属性...' }}
+                {{ props.data?.image || '请选择图片属性...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.images"
+            v-if="props.data?.image"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -82,12 +82,12 @@
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400">预测值</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ properties?.predictionPath || '请选择预测值...' }}
+                {{ props.data?.predictions || '请选择预测值...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.predictionPath"
+            v-if="props.data?.predictions"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -101,19 +101,13 @@
         </div>
       </div>
 
-      <CustomHandle
-        type="target"
-        :position="Position.Left"
-        :node-id="props.id"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
-      />
+      <CustomHandle type="target" :position="Position.Left" :node-id="props.id" />
       <CustomHandle
         type="source"
         :position="Position.Right"
         :node-id="props.id"
         :color="nodeColor"
         :show-tooltip="true"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
       />
     </div>
   </div>
@@ -131,23 +125,13 @@ import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
-  config: any
   data: any
   selected?: boolean
   type: string
 }>()
 
-const onHandleClick = computed(() => {
-  return props.data?.onHandleClick as (
-    event: MouseEvent,
-    handleType: 'source' | 'target',
-    nodeId: string,
-  ) => void | undefined
-})
-
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'amber')
-const properties = computed(() => props.data?.config?.[0] || {})
 
 const deleteNode = () => {
   store.removeNode(props.id)
@@ -157,10 +141,10 @@ const deleteNode = () => {
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  if (!props.data?.config[0]?.images) {
+  if (!props.data?.image) {
     TipContent.value = '请选择图片属性'
     isShowTip.value = true
-  } else if (!props.data?.config[0]?.predictionPath) {
+  } else if (!props.data?.predictions) {
     TipContent.value = '请选择预测值'
     isShowTip.value = true
   } else {

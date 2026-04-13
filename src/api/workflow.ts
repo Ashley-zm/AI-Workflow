@@ -72,7 +72,7 @@ let mockWorkflows: WorkflowEntity[] = [
     workflowClass: 'Tool Detection',
     description: 'Detect common defects on tool surfaces.',
     workflowJsonData: '{"steps":[]}',
-    workflowGroupId: 'g-2',
+    workflowGroup: 'g-2',
     createTime: now(),
     updateTime: now(),
   },
@@ -83,7 +83,7 @@ let mockWorkflows: WorkflowEntity[] = [
     workflowClass: 'Welding Quality',
     description: 'Inspect weld quality and output annotated results.',
     workflowJsonData: '{"steps":[]}',
-    workflowGroupId: 'g-3',
+    workflowGroup: 'g-3',
     createTime: now(),
     updateTime: now(),
   },
@@ -178,7 +178,7 @@ const mockWorkflowApi = {
         [item.workflowName, item.workflowId, item.workflowClass, item.description]
           .filter(Boolean)
           .some((text) => String(text).toLowerCase().includes(keyword))
-      const groupMatch = !groupId || String(item.workflowGroupId ?? '') === groupId
+      const groupMatch = !groupId || String(item.workflowGroup ?? '') === groupId
       return keywordMatch && groupMatch
     })
 
@@ -231,19 +231,24 @@ const mockWorkflowApi = {
   // 执行工作流（返回模拟推理结果）
   async executeWorkflow(payload: ExecuteWorkflowRequest) {
     const result: ExecuteWorkflowResult = {
-      execution_id: `exec_${Date.now()}`,
-      workflow_id: payload.workflowId,
-      status: 'completed',
-      results: {
-        detections: [
-          { bbox: [100, 150, 200, 250], label: 'person', confidence: 0.95 },
-          { bbox: [300, 180, 380, 280], label: 'car', confidence: 0.87 },
-        ],
-        annotated_image: 'data:image/jpeg;base64,mock',
+      valid: true,
+      errors: [],
+      warnings: [],
+      executeResult: {
+        execution_id: `exec_${Date.now()}`,
+        workflow_id: payload.workflowId,
+        status: 'completed',
+        results: {
+          detections: [
+            { bbox: [100, 150, 200, 250], label: 'person', confidence: 0.95 },
+            { bbox: [300, 180, 380, 280], label: 'car', confidence: 0.87 },
+          ],
+          annotated_image: 'data:image/jpeg;base64,mock',
+        },
+        execution_time_ms: 150,
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
       },
-      execution_time_ms: 150,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
     }
     return wait(success(result))
   },
@@ -267,6 +272,14 @@ const mockWorkflowApi = {
       }
     }
     return wait(success<null>(null))
+  },
+
+  async getWorkflowInfo(id: string) {
+    const target = mockWorkflows.find((item) => String(item.id) === String(id))
+    if (!target) {
+      return wait(success<WorkflowEntity | null>(null, 'Workflow not found'))
+    }
+    return wait(success(clone(target)))
   },
 }
 
@@ -340,7 +353,7 @@ const mockGroupApi = {
     if (index < 0) return wait(success(false, 'Workflow not found'))
     mockWorkflows[index] = {
       ...mockWorkflows[index]!,
-      workflowGroupId: payload.groupId,
+      workflowGroup: payload.groupId,
       updateTime: now(),
     }
     return wait(success(true))
@@ -350,8 +363,8 @@ const mockGroupApi = {
   async deleteGroup(id: string) {
     mockGroups = mockGroups.filter((item) => String(item.id) !== String(id))
     mockWorkflows = mockWorkflows.map((item) =>
-      String(item.workflowGroupId ?? '') === String(id)
-        ? { ...item, workflowGroupId: undefined }
+      String(item.workflowGroup ?? '') === String(id)
+        ? { ...item, workflowGroup: undefined }
         : item,
     )
     return wait(success(true))
@@ -400,42 +413,55 @@ const mockWorkflowServiceApi = {
 export const workflowApi = USE_WORKFLOW_MOCK
   ? mockWorkflowApi
   : {
+      // 新增/更新工作流
       addOrUpdateWorkflow(payload: AddOrUpdateWorkflowRequest) {
-        return http.post<never, ApiResponse<boolean>>(
+        return http.post<never, ApiResponse<string>>(
           `${WORKFLOW_PREFIX}/addOrUpdateWorkflow`,
           payload,
         )
       },
+      // 获取工作流列表
       getWorkflowList(params: WorkflowListQuery) {
         return http.get<never, ApiListResponse<WorkflowEntity>>(`${WORKFLOW_PREFIX}/list`, {
           params,
         })
       },
+      // 删除工作流
       deleteWorkflow(id: string) {
         return http.delete<never, ApiResponse<boolean>>(`${WORKFLOW_PREFIX}/delete/${id}`)
       },
+      // 检查工作流是否已部署
       isWorkflowDeployed(id: string) {
         return http.get<never, ApiResponse<boolean>>(`${WORKFLOW_PREFIX}/isDeployed/${id}`)
       },
+      // 复制工作流
       copyWorkflow(id: string) {
         return http.post<never, ApiResponse<boolean>>(`${WORKFLOW_PREFIX}/copyWorkflow`, { id })
       },
+      // 验证工作流
       verifyWorkflow(id: string) {
         return http.get<never, ApiResponse<VerifyWorkflowResult>>(
           `${WORKFLOW_PREFIX}/verifyWorkflow/${id}`,
         )
       },
+      // 执行工作流
       executeWorkflow(payload: ExecuteWorkflowRequest) {
         return http.post<never, ApiResponse<ExecuteWorkflowResult>>(
           `${WORKFLOW_PREFIX}/executeWorkflow`,
           payload,
         )
       },
+      // 部署工作流
       deployWorkflow(id: string) {
         return http.post<never, ApiResponse<boolean>>(`${WORKFLOW_PREFIX}/deployWorkflow`, { id })
       },
+      // 更新工作流基本信息
       updateWorkflowBase(payload: UpdateWorkflowBaseRequest) {
         return http.post<never, ApiResponse<null>>(`${WORKFLOW_PREFIX}/updateWorkflowBase`, payload)
+      },
+      // 获取工作流信息
+      getWorkflowInfo(id: string) {
+        return http.get<never, ApiResponse<any>>(`${WORKFLOW_PREFIX}/getInfo/${id}`)
       },
     }
 
@@ -501,9 +527,9 @@ export const workflowServiceApi = USE_WORKFLOW_MOCK
     }
 // 模型服务接口
 export const getModelServiceList = (data: ModelServiceListQuery) => {
-  return http.post(`/cyc/modelService/v0.2/list`, data)
+  return http.post<never, ApiListResponse<any>>(`/cyc/modelService/v0.2/list`, data)
 }
 // 获取GPU信息
 export const getGpuInfo = () => {
-  return http.get(`/cyc/trainingTask/v0.3/getGpuInfo`)
+  return http.get<never, ApiResponse<any>>(`/cyc/trainingTask/v0.3/getGpuInfo`)
 }

@@ -7,7 +7,7 @@
     <!-- 悬浮按钮 -->
     <div
       @click="toggleComponentLibrary"
-      class="w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-all duration-300 transform"
+      class="w-12 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-all duration-300 transform"
       :class="{ 'rotate-45': isOpen, 'scale-110': isHovered }"
     >
       <Plus :size="24" />
@@ -34,7 +34,7 @@ const emit = defineEmits<{
 }>()
 
 // 状态管理
-const isOpen = ref(true)
+const isOpen = ref(false)
 const isHovered = ref(false)
 
 // 切换组件库显示状态

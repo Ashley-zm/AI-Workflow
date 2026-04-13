@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 p-2 flex justify-center">
+  <div class="p-2 flex justify-center">
     <div class="flex items-center gap-2 bg-white rounded-lg shadow-md border border-gray-200 p-1">
       <!-- 撤销/重做组 -->
       <div class="flex items-center gap-1">

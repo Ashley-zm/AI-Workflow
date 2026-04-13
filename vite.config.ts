@@ -26,6 +26,11 @@ export default defineConfig(({ mode }) => {
           // 将请求路径中的前缀替换为空字符串
           rewrite: (path: string) => path.replace(new RegExp('^' + env.VITE_APP_BASE_API), ''),
         },
+        '/baidu': {
+          target: 'https://fanyi-api.baidu.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/baidu/, ''),
+        },
       },
     },
   }

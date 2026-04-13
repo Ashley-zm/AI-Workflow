@@ -1,6 +1,6 @@
 <template>
   <div
-    class="absolute right-4 top-16 z-20 w-80 bg-white rounded-lg shadow-lg border border-slate-200"
+    class="absolute right-4 top-16 z-20 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-lg border border-slate-200"
   >
     <div class="flex items-center justify-between p-4 border-b border-slate-200">
       <div class="flex items-center gap-2">
@@ -18,7 +18,7 @@
     <div class="p-4">
       <div
         v-if="healthStatus === 'checking'"
-        class="flex items-center justify-center py-8 text-slate-500"
+        class="flex items-center justify-center py-10 text-slate-500"
       >
         <div class="flex items-center gap-2">
           <Loader2 :size="20" class="animate-spin" />
@@ -26,76 +26,119 @@
         </div>
       </div>
 
-      <div v-else-if="healthStatus === 'healthy'" class="space-y-3">
-        <div class="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-          <CheckCircle :size="20" class="text-green-500" />
-          <div>
-            <div class="font-medium text-green-800">工作流健康</div>
-            <div class="text-xs text-green-600">所有节点和连接都正常</div>
+      <template v-else>
+        <div
+          class="mb-3 rounded-lg border p-3"
+          :class="{
+            'bg-green-50 border-green-200': healthStatus === 'healthy',
+            'bg-yellow-50 border-yellow-200': healthStatus === 'warning',
+            'bg-red-50 border-red-200': healthStatus === 'error',
+          }"
+        >
+          <div class="flex items-start gap-2">
+            <CheckCircle
+              v-if="healthStatus === 'healthy'"
+              :size="18"
+              class="text-green-500 mt-0.5"
+            />
+            <AlertTriangle
+              v-else-if="healthStatus === 'warning'"
+              :size="18"
+              class="text-yellow-500 mt-0.5"
+            />
+            <XCircle v-else :size="18" class="text-red-500 mt-0.5" />
+            <div>
+              <div
+                class="font-medium"
+                :class="{
+                  'text-green-800': healthStatus === 'healthy',
+                  'text-yellow-800': healthStatus === 'warning',
+                  'text-red-800': healthStatus === 'error',
+                }"
+              >
+                {{ summaryTitle }}
+              </div>
+              <div
+                class="text-xs"
+                :class="{
+                  'text-green-600': healthStatus === 'healthy',
+                  'text-yellow-700': healthStatus === 'warning',
+                  'text-red-700': healthStatus === 'error',
+                }"
+              >
+                {{ summaryDesc }}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex justify-between text-sm">
-            <span class="text-slate-600">节点数量</span>
-            <span class="font-medium text-slate-800">{{ nodeCount }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-slate-600">连接数量</span>
-            <span class="font-medium text-slate-800">{{ edgeCount }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-slate-600">输入节点</span>
-            <span class="font-medium text-slate-800">{{ inputNodeCount }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-slate-600">输出节点</span>
-            <span class="font-medium text-slate-800">{{ outputNodeCount }}</span>
-          </div>
+        <div
+          v-if="hasChangesSinceLastCheck"
+          class="mb-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700"
+        >
+          当前画布有变更，建议重新执行健康检查。
         </div>
-      </div>
 
-      <div v-else-if="healthStatus === 'warning'" class="space-y-3">
-        <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-          <AlertTriangle :size="20" class="text-yellow-500" />
-          <div>
-            <div class="font-medium text-yellow-800">存在警告</div>
-            <div class="text-xs text-yellow-600">工作流可以运行，但可能存在问题</div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+          <div class="rounded border border-slate-200 px-2 py-2">
+            <span class="text-slate-500">节点总数</span>
+            <div class="text-sm font-semibold text-slate-800">{{ nodeCount }}</div>
+          </div>
+          <div class="rounded border border-slate-200 px-2 py-2">
+            <span class="text-slate-500">连线总数</span>
+            <div class="text-sm font-semibold text-slate-800">{{ edgeCount }}</div>
+          </div>
+          <div class="rounded border border-slate-200 px-2 py-2">
+            <span class="text-slate-500">输入节点</span>
+            <div class="text-sm font-semibold text-slate-800">{{ inputNodeCount }}</div>
+          </div>
+          <div class="rounded border border-slate-200 px-2 py-2">
+            <span class="text-slate-500">输出节点</span>
+            <div class="text-sm font-semibold text-slate-800">{{ outputNodeCount }}</div>
           </div>
         </div>
 
-        <div class="space-y-2 max-h-48 overflow-y-auto">
-          <div
-            v-for="(warning, index) in warnings"
-            :key="index"
-            class="flex items-start gap-2 p-2 bg-yellow-50 rounded border border-yellow-200"
-          >
-            <AlertTriangle :size="14" class="text-yellow-500 mt-0.5" />
-            <span class="text-xs text-yellow-800">{{ warning }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="healthStatus === 'error'" class="space-y-3">
-        <div class="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
-          <XCircle :size="20" class="text-red-500" />
-          <div>
-            <div class="font-medium text-red-800">存在错误</div>
-            <div class="text-xs text-red-600">工作流无法运行，请修复以下问题</div>
+        <div v-if="errors.length" class="mb-3">
+          <div class="mb-1 text-xs font-semibold text-red-700">错误（{{ errors.length }}）</div>
+          <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
+            <div
+              v-for="(error, index) in errors"
+              :key="`err-${index}`"
+              class="rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800"
+            >
+              {{ error }}
+            </div>
           </div>
         </div>
 
-        <div class="space-y-2 max-h-48 overflow-y-auto">
-          <div
-            v-for="(error, index) in errors"
-            :key="index"
-            class="flex items-start gap-2 p-2 bg-red-50 rounded border border-red-200"
-          >
-            <XCircle :size="14" class="text-red-500 mt-0.5" />
-            <span class="text-xs text-red-800">{{ error }}</span>
+        <div v-if="warnings.length" class="mb-3">
+          <div class="mb-1 text-xs font-semibold text-yellow-700">警告（{{ warnings.length }}）</div>
+          <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
+            <div
+              v-for="(warning, index) in warnings"
+              :key="`warn-${index}`"
+              class="rounded border border-yellow-200 bg-yellow-50 px-2 py-1.5 text-xs text-yellow-800"
+            >
+              {{ warning }}
+            </div>
           </div>
         </div>
-      </div>
+
+        <div v-if="suggestions.length" class="mb-3">
+          <div class="mb-1 text-xs font-semibold text-slate-700">修复建议</div>
+          <div class="space-y-1">
+            <div
+              v-for="(suggestion, index) in suggestions"
+              :key="`suggest-${index}`"
+              class="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700"
+            >
+              {{ index + 1 }}. {{ suggestion }}
+            </div>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400">最近检查：{{ lastCheckedAt || '-' }}</div>
+      </template>
 
       <div class="mt-4 pt-4 border-t border-slate-200">
         <button
@@ -110,90 +153,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import {
-  Activity,
-  X,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Loader2,
-} from 'lucide-vue-next'
+import { storeToRefs } from 'pinia'
+import { Activity, X, CheckCircle, AlertTriangle, XCircle, Loader2 } from 'lucide-vue-next'
+import { useWorkflowStore } from '@/stores/workflow'
 
-const props = defineProps<{
-  nodes: any[]
-  edges: any[]
-}>()
-
-const emit = defineEmits<{
+defineEmits<{
   close: []
   recheck: []
 }>()
 
-const healthStatus = ref<'checking' | 'healthy' | 'warning' | 'error'>('checking')
-const warnings = ref<string[]>([])
-const errors = ref<string[]>([])
-
-const nodeCount = computed(() => props.nodes.length)
-const edgeCount = computed(() => props.edges.length)
-const inputNodeCount = computed(() => props.nodes.filter((n) => n.type === 'inputs').length)
-const outputNodeCount = computed(() => props.nodes.filter((n) => n.type === 'outputs').length)
-
-const performHealthCheck = () => {
-  healthStatus.value = 'checking'
-  warnings.value = []
-  errors.value = []
-
-  setTimeout(() => {
-    let hasWarnings = false
-    let hasErrors = false
-
-    if (nodeCount.value === 0) {
-      errors.value.push('工作流中没有节点')
-      hasErrors = true
-    }
-
-    if (inputNodeCount.value === 0) {
-      errors.value.push('缺少输入节点')
-      hasErrors = true
-    }
-
-    if (outputNodeCount.value === 0) {
-      errors.value.push('缺少输出节点')
-      hasErrors = true
-    }
-
-    props.nodes.forEach((node) => {
-      if (!node.data.config) {
-        warnings.value.push(`节点 "${node.name}" 未配置`)
-        hasWarnings = true
-      }
-
-      const hasIncomingEdges = props.edges.some((e) => e.target === node.id)
-      const hasOutgoingEdges = props.edges.some((e) => e.source === node.id)
-
-      if (node.type !== 'inputs' && !hasIncomingEdges) {
-        warnings.value.push(`节点 "${node.name}" 没有输入连接`)
-        hasWarnings = true
-      }
-
-      if (node.type !== 'outputs' && !hasOutgoingEdges) {
-        warnings.value.push(`节点 "${node.name}" 没有输出连接`)
-        hasWarnings = true
-      }
-    })
-
-    if (hasErrors) {
-      healthStatus.value = 'error'
-    } else if (hasWarnings) {
-      healthStatus.value = 'warning'
-    } else {
-      healthStatus.value = 'healthy'
-    }
-  }, 500)
-}
-
-defineExpose({
-  performHealthCheck,
-})
+const store = useWorkflowStore()
+const {
+  workflowHealthStatus: healthStatus,
+  workflowHealthWarnings: warnings,
+  workflowHealthErrors: errors,
+  workflowHealthSuggestions: suggestions,
+  workflowHealthLastCheckedAt: lastCheckedAt,
+  workflowHealthHasChangesSinceLastCheck: hasChangesSinceLastCheck,
+  workflowHealthNodeCount: nodeCount,
+  workflowHealthEdgeCount: edgeCount,
+  workflowHealthInputNodeCount: inputNodeCount,
+  workflowHealthOutputNodeCount: outputNodeCount,
+  workflowHealthSummaryTitle: summaryTitle,
+  workflowHealthSummaryDesc: summaryDesc,
+} = storeToRefs(store)
 </script>

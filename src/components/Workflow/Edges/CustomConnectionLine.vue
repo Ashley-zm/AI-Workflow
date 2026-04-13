@@ -24,8 +24,8 @@ defineProps({
     <path
       class="vue-flow__connection animated"
       fill="none"
-      stroke="#6F3381"
-      :stroke-width="2.5"
+      stroke="#b1b1b7"
+      :stroke-width="1.5"
       :d="`M${sourceX},${sourceY} C ${sourceX} ${targetY} ${sourceX} ${targetY} ${targetX},${targetY}`"
     />
 

@@ -7,12 +7,12 @@
           <div class="h-4 w-0.5 rounded-full bg-blue-500"></div>
           <h3 class="text-sm font-semibold text-slate-800">自定义属性</h3>
         </div>
-        <div class="text-xs text-slate-500">{{ config.length }} 个属性</div>
+        <div class="text-xs text-slate-500">{{ data.length }} 个属性</div>
       </div>
 
       <div class="space-y-3">
         <div
-          v-for="(property, index) in config"
+          v-for="(property, index) in data"
           :key="index"
           class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
         >
@@ -179,7 +179,7 @@
       </div>
       <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
         <pre class="text-xs text-slate-100 font-mono whitespace-pre-wrap">{{
-          JSON.stringify(config, null, 2)
+          JSON.stringify(data, null, 2)
         }}</pre>
       </div>
     </div>
@@ -207,27 +207,27 @@ interface Property {
   defaultValue?: string | undefined
 }
 
-const config = ref<Property[]>([])
+const data = ref<Property[]>([])
 
 const initializeProperties = () => {
-  if (props.modelValue) {
-    config.value = JSON.parse(JSON.stringify(props.modelValue))
+  if (props.modelValue.length) {
+    data.value = JSON.parse(JSON.stringify(props.modelValue))
   } else {
-    config.value = []
+    data.value = []
   }
 }
 
 const addProperty = () => {
   const newProperty: Property = {
-    name: config.value.length > 0 ? 'img' + (config.value.length + 1) : 'img',
+    name: data.value.length > 0 ? 'image' + (data.value.length + 1) : 'image',
     type: 'image',
   }
-  config.value.push(newProperty)
+  data.value.push(newProperty)
   updateProperties()
 }
 
 const removeProperty = (index: number) => {
-  config.value.splice(index, 1)
+  data.value.splice(index, 1)
   updateProperties()
 }
 
@@ -289,9 +289,9 @@ const handlePropertyNameInput = (property: Property, index: number) => {
   if (!validation.valid) {
     property.name = ''
     ElMessage.error(validation.message || '属性名称格式错误')
-    config.value[index] = { ...property }
-    emit('update:nodeConfig', config.value)
-    config.value = [...config.value]
+    data.value[index] = { ...property }
+    emit('update:nodeConfig', data.value)
+    data.value = [...data.value]
     return
   }
 
@@ -299,8 +299,8 @@ const handlePropertyNameInput = (property: Property, index: number) => {
 }
 
 const updateProperties = () => {
-  for (let i = 0; i < config.value.length; i++) {
-    const property = config.value[i]
+  for (let i = 0; i < data.value.length; i++) {
+    const property = data.value[i]
     if (!property) {
       return
     }
@@ -312,12 +312,12 @@ const updateProperties = () => {
       }
     }
   }
-  emit('update:nodeConfig', JSON.parse(JSON.stringify(config.value)))
+  emit('update:nodeConfig', JSON.parse(JSON.stringify(data.value)))
 }
 
 const updateProperty = () => {
-  for (let i = 0; i < config.value.length; i++) {
-    const property = config.value[i]
+  for (let i = 0; i < data.value.length; i++) {
+    const property = data.value[i]
     if (!property) {
       return
     }
@@ -350,7 +350,7 @@ const getPropertyTypeIcon = (type: string) => {
 }
 
 const copyJson = () => {
-  const json = JSON.stringify(config.value, null, 2)
+  const json = JSON.stringify(data.value, null, 2)
   navigator.clipboard
     .writeText(json)
     .then(() => {

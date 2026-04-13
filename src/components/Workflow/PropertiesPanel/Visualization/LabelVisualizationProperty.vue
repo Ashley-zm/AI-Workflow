@@ -19,7 +19,7 @@
             class="w-full"
           >
             <el-icon class="mr-2"><Picture /></el-icon>
-            {{ selectedImagePath ? '重新选择图片' : '选择图片属性' }}
+            {{ data.image ? '重新选择图片' : '选择图片属性' }}
           </el-button>
         </div>
 
@@ -35,14 +35,14 @@
         </div>
 
         <div
-          v-if="selectedImagePath"
+          v-if="data.image"
           class="flex items-center justify-between rounded-lg bg-emerald-50 p-3 border border-emerald-200"
         >
           <div class="flex items-center gap-2">
             <CheckCircle :size="16" class="text-emerald-500" />
             <div class="text-xs text-emerald-700">
               <div class="font-medium">已选择图片属性</div>
-              <div class="text-emerald-600">{{ selectedImagePath }}</div>
+              <div class="text-emerald-600">{{ data.image }}</div>
             </div>
           </div>
           <button
@@ -55,7 +55,7 @@
         </div>
 
         <div
-          v-if="availableImageNodes.length > 0 && !selectedImagePath"
+          v-if="availableImageNodes.length > 0 && !data.image"
           class="flex items-center gap-2 rounded-lg bg-blue-50 p-3 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
           @click="
             selectImageProperty(availableImageNodes[0], availableImageNodes[0]?.imageProperties[0])
@@ -93,7 +93,7 @@
             class="w-full"
           >
             <el-icon class="mr-2"><Database /></el-icon>
-            {{ selectedPredictionPath ? '重新选择预测值' : '选择预测值' }}
+            {{ data.predictions ? '重新选择预测值' : '选择预测值' }}
           </el-button>
         </div>
 
@@ -104,19 +104,19 @@
           <AlertCircle :size="16" class="text-amber-500 mt-0.5 flex-shrink-0" />
           <div class="text-xs text-amber-700">
             <div class="font-medium mb-1">暂无可用预测值</div>
-            <div>当前流程中没有包含预测值的节点，请先添加包含预测值的节点。</div>
+            <div>请先将当前可视化节点连接到模型节点，再选择预测值。</div>
           </div>
         </div>
 
         <div
-          v-if="selectedPredictionPath"
+          v-if="data.predictions"
           class="flex items-center justify-between rounded-lg bg-emerald-50 p-3 border border-emerald-200"
         >
           <div class="flex items-center gap-2">
             <CheckCircle :size="16" class="text-emerald-500" />
             <div class="text-xs text-emerald-700">
               <div class="font-medium">已选择预测值</div>
-              <div class="text-emerald-600">{{ selectedPredictionPath }}</div>
+              <div class="text-emerald-600">{{ data.predictions }}</div>
             </div>
           </div>
           <button
@@ -129,7 +129,7 @@
         </div>
 
         <div
-          v-if="availablePredictionNodes.length > 0 && !selectedPredictionPath"
+          v-if="availablePredictionNodes.length > 0 && !data.predictions"
           class="flex items-center gap-2 rounded-lg bg-blue-50 p-3 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
           @click="
             selectPredictionProperty(
@@ -141,11 +141,7 @@
           <Zap :size="16" class="text-blue-500" />
           <div class="text-xs text-blue-700">
             <div class="font-medium">快速选择</div>
-            <div>
-              ${{ availablePredictionNodes[0]?.id }}.{{
-                availablePredictionNodes[0]?.predictionProperties?.model_id || '无'
-              }}
-            </div>
+            <div>$steps.{{ availablePredictionNodes[0]?.name }}</div>
           </div>
         </div>
       </div>
@@ -163,7 +159,7 @@
             <label class="block text-xs font-medium text-slate-700 mb-2">标签字体大小</label>
             <div class="flex items-center gap-2">
               <el-input-number
-                v-model="labelFontSize"
+                v-model="data.labelFontSize"
                 :min="10"
                 :max="30"
                 :step="1"
@@ -177,7 +173,7 @@
             <label class="block text-xs font-medium text-slate-700 mb-2">标签边框圆角</label>
             <div class="flex items-center gap-2">
               <el-input-number
-                v-model="labelBorderRadius"
+                v-model="data.labelBorderRadius"
                 :min="0"
                 :max="20"
                 :step="1"
@@ -193,15 +189,15 @@
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-2">标签字体颜色</label>
             <div class="flex items-center gap-2">
-              <el-color-picker v-model="labelColor" show-alpha @change="updateConfig" />
-              <span class="text-xs text-slate-500">{{ labelColor }}</span>
+              <el-color-picker v-model="data.labelColor" show-alpha @change="updateConfig" />
+              <span class="text-xs text-slate-500">{{ data.labelColor }}</span>
             </div>
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-2">标签背景颜色</label>
             <div class="flex items-center gap-2">
-              <el-color-picker v-model="labelBgColor" show-alpha @change="updateConfig" />
-              <span class="text-xs text-slate-500">{{ labelBgColor }}</span>
+              <el-color-picker v-model="data.labelBgColor" show-alpha @change="updateConfig" />
+              <span class="text-xs text-slate-500">{{ data.labelBgColor }}</span>
             </div>
           </div>
         </div>
@@ -210,7 +206,7 @@
           <label class="block text-xs font-medium text-slate-700 mb-2">标签内边距</label>
           <div class="flex items-center gap-2">
             <el-input-number
-              v-model="labelPadding"
+              v-model="data.labelPadding"
               :min="0"
               :max="20"
               :step="1"
@@ -223,15 +219,15 @@
 
         <div class="flex items-center justify-between">
           <label class="text-xs font-medium text-slate-700">显示置信度</label>
-          <el-switch v-model="showConfidence" @change="updateConfig" />
+          <el-switch v-model="data.showConfidence" @change="updateConfig" />
         </div>
 
-        <div v-if="showConfidence" class="space-y-4 pt-2 border-t border-slate-200">
+        <div v-if="data.showConfidence" class="space-y-4 pt-2 border-t border-slate-200">
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-2">置信度小数位数</label>
             <div class="flex items-center gap-2">
               <el-input-number
-                v-model="confidenceDecimals"
+                v-model="data.confidenceDecimals"
                 :min="0"
                 :max="4"
                 :step="1"
@@ -261,7 +257,7 @@
       </div>
       <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
         <pre class="text-xs text-slate-100 font-mono whitespace-pre-wrap">{{
-          JSON.stringify(config, null, 2)
+          JSON.stringify(data, null, 2)
         }}</pre>
       </div>
     </div>
@@ -342,8 +338,8 @@
             <Database :size="32" class="text-slate-400" />
           </div>
         </div>
-        <p class="text-sm text-slate-500">当前流程中没有包含预测值的节点</p>
-        <p class="text-xs text-slate-400 mt-1">请先添加包含预测值的节点</p>
+        <p class="text-sm text-slate-500">当前节点未连接可用的模型节点</p>
+        <p class="text-xs text-slate-400 mt-1">请先连接模型节点，再选择预测值</p>
       </div>
       <div v-else class="space-y-3">
         <div
@@ -391,7 +387,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { Picture, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -400,165 +396,197 @@ import { getNodeTypeIcon, getNodeTypeLabel } from '@/components/Workflow/config/
 import { X, Zap, AlertCircle, CheckCircle, Database, Image } from 'lucide-vue-next'
 
 const props = defineProps<{
-  modelValue: any[]
-  nodeId: string
+  modelValue?: Property
+  nodeId?: string | number
 }>()
 
+interface Property {
+  image?: string
+  predictions?: string
+  labelFontSize: number
+  labelColor: string
+  labelBgColor: string
+  labelBorderRadius: number
+  labelPadding: number
+  showConfidence: boolean
+  confidenceDecimals: number
+  [key: string]: any
+}
+
 const emit = defineEmits<{
-  'update:modelValue': [value: any[]]
+  'update:nodeConfig': [value: Property]
 }>()
 
 const store = useWorkflowStore()
 
 const showImageSelectionDialog = ref(false)
 const showPredictionSelectionDialog = ref(false)
-const selectedImagePath = ref('')
-const selectedPredictionPath = ref('')
-const labelFontSize = ref(14)
-const labelColor = ref('#FFFFFF')
-const labelBgColor = ref('#FF0000')
-const labelBorderRadius = ref(4)
-const labelPadding = ref(4)
-const showConfidence = ref(true)
-const confidenceDecimals = ref(2)
+const defaultData = (): Property => ({
+  image: undefined,
+  predictions: undefined,
+  labelFontSize: 14,
+  labelColor: '#FFFFFF',
+  labelBgColor: '#FF0000',
+  labelBorderRadius: 4,
+  labelPadding: 4,
+  showConfidence: true,
+  confidenceDecimals: 2,
+})
+const data = ref<Property>(defaultData())
+
+const getImageProperties = (node: any) => {
+  if (Array.isArray(node?.data)) {
+    return node.data.filter((prop: any) => prop.type === 'image')
+  }
+  if (Array.isArray(node?.data?.config)) {
+    return node.data.config.filter((prop: any) => prop.type === 'image')
+  }
+  return []
+}
 
 const availableImageNodes = computed(() => {
   return store.nodes
     .filter((node) => {
-      const nodeProperties = node.data?.config
-      if (!nodeProperties || !Array.isArray(nodeProperties)) return false
-      const hasImageProperty = nodeProperties.some((prop: any) => prop.type === 'image')
-      return hasImageProperty
+      return getImageProperties(node).length > 0
     })
     .map((node) => {
-      const nodeProperties = node.data?.config
       return {
         id: node.id,
         type: node.type,
-        imageProperties: nodeProperties.filter((prop: any) => prop.type === 'image'),
+        imageProperties: getImageProperties(node),
       }
     })
 })
 
-const modelTypes = ['detection_model', 'classification_model', 'segmentation_model']
+const modelTypes = new Set([
+  'detection_model@v1',
+  'classification_model@v1',
+  'segmentation_model',
+  'object-detection-model',
+  'classification-model',
+  'segmentation-model',
+])
+const currentNodeId = computed(() => {
+  const id = props.nodeId ?? store.selectedNode?.id
+  return id !== undefined && id !== null ? String(id) : ''
+})
 const availablePredictionNodes = computed(() => {
+  const currentId = currentNodeId.value
+  if (!currentId) return []
+
+  const sourceNodeIds = new Set(
+    store.edges
+      .filter((edge) => String(edge.target) === currentId)
+      .map((edge) => String(edge.source)),
+  )
+
   return store.nodes
     .filter((node) => {
-      const hasPredictionProperty = modelTypes.some(
-        (prop: any) => node.type === prop && node.data?.config?.[0]?.model_id,
-      )
-      return hasPredictionProperty
+      return sourceNodeIds.has(String(node.id)) && modelTypes.has(String(node.type))
     })
     .map((node) => {
       return {
         id: node.id,
         type: node.type,
-        predictionProperties: node.data?.config[0],
+        name: node.name || node.id,
+        predictionProperties: node?.data || {},
       }
     })
 })
 
 const selectImageProperty = (node: any, property: any) => {
-  selectedImagePath.value = `$${node.id}.${property.name}`
+  data.value.image = `$${node.id}.${property.name}`
   showImageSelectionDialog.value = false
   updateConfig()
-  ElMessage.success(`已选择图片属性: ${selectedImagePath.value}`)
+  ElMessage.success(`已选择图片属性: ${data.value.image}`)
 }
 
 const selectPredictionProperty = (node: any, property: any) => {
-  selectedPredictionPath.value = `$${node.id}.${property.model_id}`
+  data.value.predictions = `$steps.${node.name}`
   showPredictionSelectionDialog.value = false
   updateConfig()
-  ElMessage.success(`已选择预测值: ${selectedPredictionPath.value}`)
+  ElMessage.success(`已选择预测值: ${data.value.predictions}`)
 }
 
 const clearSelectedImage = () => {
-  selectedImagePath.value = ''
+  data.value.image = undefined
   updateConfig()
   ElMessage.info('已清空选中的图片属性')
 }
 
 const clearSelectedPrediction = () => {
-  selectedPredictionPath.value = ''
+  data.value.predictions = undefined
   updateConfig()
   ElMessage.info('已清空选中的预测值')
 }
 
-const copyJson = () => {
-  const json = JSON.stringify(config.value, null, 2)
-  navigator.clipboard
-    .writeText(json)
-    .then(() => {
-      ElMessage.success('已复制JSON')
-    })
-    .catch(() => {
-      ElMessage.error('复制失败')
-    })
+const fallbackCopyText = (text: string) => {
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', 'readonly')
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const copied = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return copied
+  } catch {
+    return false
+  }
 }
 
-const config = ref<any[]>([])
-const updateConfig = () => {
-  let newConfig: Record<string, any> = {
-    images: selectedImagePath.value,
-    predictionPath: selectedPredictionPath.value,
-    labelFontSize: labelFontSize.value,
-    labelColor: labelColor.value,
-    labelBgColor: labelBgColor.value,
-    labelBorderRadius: labelBorderRadius.value,
-    labelPadding: labelPadding.value,
-    showConfidence: showConfidence.value,
-    confidenceDecimals: confidenceDecimals.value,
+const copyJson = async () => {
+  const json = JSON.stringify(data.value, null, 2)
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(json)
+      ElMessage.success('已复制JSON')
+      return
+    }
+
+    const copied = fallbackCopyText(json)
+    if (copied) {
+      ElMessage.success('已复制JSON')
+      return
+    }
+    ElMessage.error('复制失败')
+  } catch {
+    const copied = fallbackCopyText(json)
+    if (copied) {
+      ElMessage.success('已复制JSON')
+      return
+    }
+    ElMessage.error('复制失败')
   }
-  config.value = [newConfig]
-  emit('update:modelValue', config.value)
+}
+
+const updateConfig = () => {
+  emit('update:nodeConfig', JSON.parse(JSON.stringify(data.value)))
 }
 
 const initializeData = () => {
-  if (props.modelValue.length > 0) {
-    const {
-      images,
-      predictionPath,
-      labelFontSize: initLabelFontSize,
-      labelColor: initLabelColor,
-      labelBgColor: initLabelBgColor,
-      labelBorderRadius: initLabelBorderRadius,
-      labelPadding: initLabelPadding,
-      showConfidence: initShowConfidence,
-      confidenceDecimals: initConfidenceDecimals,
-    } = props.modelValue[0]
-    selectedImagePath.value = images || ''
-    selectedPredictionPath.value = predictionPath || ''
-    labelFontSize.value = initLabelFontSize || 14
-    labelColor.value = initLabelColor || '#FFFFFF'
-    labelBgColor.value = initLabelBgColor || '#FF0000'
-    labelBorderRadius.value = initLabelBorderRadius || 4
-    labelPadding.value = initLabelPadding || 4
-    showConfidence.value = initShowConfidence !== undefined ? initShowConfidence : true
-    confidenceDecimals.value = initConfidenceDecimals || 2
-    config.value = props.modelValue
-  } else {
-    clearData()
+  if (
+    !props.modelValue ||
+    typeof props.modelValue !== 'object' ||
+    Array.isArray(props.modelValue)
+  ) {
+    data.value = defaultData()
+    return
+  }
+
+  data.value = {
+    ...defaultData(),
+    ...JSON.parse(JSON.stringify(props.modelValue)),
   }
 }
 
-const clearData = () => {
-  selectedImagePath.value = ''
-  selectedPredictionPath.value = ''
-  labelFontSize.value = 14
-  labelColor.value = '#FFFFFF'
-  labelBgColor.value = '#FF0000'
-  labelBorderRadius.value = 4
-  labelPadding.value = 4
-  showConfidence.value = true
-  confidenceDecimals.value = 2
-  config.value = []
-}
-
-watch(() => props.modelValue, initializeData, { immediate: true })
-
-onMounted(() => {
-  initializeData()
-})
+watch(
+  () => props.modelValue,
+  () => initializeData(),
+  { deep: true, immediate: true },
+)
 </script>
 
 <style>

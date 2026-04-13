@@ -6,9 +6,12 @@
           class="w-10 h-10 rounded-lg flex items-center justify-center"
           :class="`bg-${nodeColor}-50 text-${nodeColor}-600`"
         >
-          <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
+          <component :size="18" :is="getIconComponent(nodeObj?.icon || 'BotIcon')" />
         </div>
-        <h3 class="font-bold text-gray-800">{{ currentNode?.type }}配置</h3>
+        <div>
+          <h3 class="font-bold text-gray-800">{{ currentNode?.name }}配置</h3>
+          <span class="text-xs text-gray-500">{{ currentNode?.type }}</span>
+        </div>
       </div>
       <X
         :size="28"
@@ -16,23 +19,25 @@
         class="text-slate-500 cursor-pointer hover:bg-gray-100 p-1 rounded-full"
       />
     </div>
+    <el-scrollbar>
+      <div class="flex-1 overflow-y-auto p-4" v-if="currentNode">
+        <p class="text-xs text-gray-500 mb-2">提示：在画布上编辑的内容会实时自动保存。</p>
+        <div
+          class="mb-6 p-3 bg-blue-50 rounded-lg text-xs text-blue-600 font-mono overflow-hidden text-ellipsis"
+        >
+          Id: {{ currentNode.id }}
+        </div>
 
-    <div class="flex-1 overflow-y-auto p-4" v-if="currentNode">
-      <p class="text-xs text-gray-500 mb-2">提示：在画布上编辑的内容会实时自动保存。</p>
-      <div
-        class="mb-6 p-3 bg-blue-50 rounded-lg text-xs text-blue-600 font-mono overflow-hidden text-ellipsis"
-      >
-        ID: {{ currentNode.id }}
+        <component
+          :is="currentPropertyComponent"
+          v-if="currentNode.id"
+          :modelValue="currentNode.data"
+          :nodeObj="nodeObj"
+          :nodeId="currentNode.id"
+          @update:nodeConfig="updateNodeConfig"
+        />
       </div>
-
-      <component
-        :is="currentPropertyComponent"
-        v-if="currentNode.id"
-        v-model="currentNode.data.config"
-        :nodeId="currentNode.id"
-        @update:nodeConfig="updateNodeConfig"
-      />
-    </div>
+    </el-scrollbar>
   </div>
 </template>
 
@@ -40,12 +45,12 @@
 import { computed, markRaw } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useWorkflowStore } from '@/stores/workflow'
+import ClassificationModeProperty from './Model/ClassificationModeProperty.vue'
 import ObjectDetectionModeProperty from './Model/ObjectDetectionModeProperty.vue'
 import BoundingBoxVisualizationProperty from './Visualization/BoundingBoxVisualizationProperty.vue'
 import PolygonVisualizationProperty from './Visualization/PolygonVisualizationProperty.vue'
 import LabelVisualizationProperty from './Visualization/LabelVisualizationProperty.vue'
 import IfElseProperty from './Conditional/IfElseProperty.vue'
-
 import InputProperty from './InputProperty.vue'
 import OutputProperty from './OutputProperty.vue'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
@@ -55,11 +60,11 @@ const store = useWorkflowStore()
 // 组件映射表
 const propertyComponents = {
   'detection_model@v1': markRaw(ObjectDetectionModeProperty),
-  classification_model: markRaw(ObjectDetectionModeProperty),
+  'classification_model@v1': markRaw(ClassificationModeProperty),
   segmentation_model: markRaw(ObjectDetectionModeProperty),
   inputs: markRaw(InputProperty),
   outputs: markRaw(OutputProperty),
-  bounding_box: markRaw(BoundingBoxVisualizationProperty),
+  'bounding_box_visualization@v1': markRaw(BoundingBoxVisualizationProperty),
   polygon_visualization: markRaw(PolygonVisualizationProperty),
   label_visualization: markRaw(LabelVisualizationProperty),
   if_else: markRaw(IfElseProperty),
@@ -67,11 +72,15 @@ const propertyComponents = {
 }
 
 // 使用 computed 获取当前选中的节点，保证响应性
-const currentNode = computed(() => store.selectedNode)
-const nodeType = computed(() =>
+const currentNode = computed(() => {
+  console.log('dddd', store.selectedNode)
+
+  return store.selectedNode
+})
+const nodeObj = computed(() =>
   currentNode.value?.type ? getNodeType(currentNode.value.type) : null,
 )
-const nodeColor = computed(() => nodeType.value?.color || 'blue')
+const nodeColor = computed(() => nodeObj.value?.color || 'blue')
 
 // 根据当前节点类型计算对应的属性组件
 const currentPropertyComponent = computed(() => {

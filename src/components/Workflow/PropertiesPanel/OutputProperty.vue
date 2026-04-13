@@ -9,52 +9,85 @@
         已连接 {{ sourceNodes.length }} 个节点
       </div>
 
-      <!-- Statistics -->
-      <div v-if="sourceNodes.length > 0">
-        <div class="flex items-center gap-2 mb-3">
-          <div class="h-4 w-0.5 rounded-full bg-emerald-500"></div>
-          <h3 class="text-sm font-semibold text-slate-800">数据统计</h3>
+      <!-- Basic Config -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="h-4 w-0.5 rounded-full bg-purple-500"></div>
+            <h3 class="text-sm font-semibold text-slate-800">输出字段配置</h3>
+          </div>
+          <div class="text-xs text-slate-500">{{ outputFields.length }} 个字段</div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div
-            class="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200"
-          >
-            <div class="flex items-center gap-2 text-[10px] text-blue-600 mb-2">
-              <Users :size="10" />
-              <span>连接节点</span>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+          <div class="space-y-2">
+            <div class="text-xs font-medium text-slate-600">可选择数据（按节点分组）</div>
+            <div
+              v-if="selectorGroups.length === 0"
+              class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700"
+            >
+              暂无可用selector，请先连接包含数据的输入/步骤节点。
             </div>
-            <div class="text-2xl font-bold text-blue-700">{{ sourceNodes.length }}</div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="group in selectorGroups"
+                :key="group.nodeId"
+                class="rounded-lg border border-slate-200 bg-slate-50 p-3"
+              >
+                <div class="mb-2 flex items-center gap-2">
+                  <span class="text-xs font-medium text-slate-700">{{ group.nodeName }}</span>
+                  <el-tag size="small" type="info" class="!text-[10px]">{{
+                    group.nodeType
+                  }}</el-tag>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="option in group.options"
+                    :key="option.value"
+                    class="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                    :disabled="isSelectorSelected(option.value)"
+                    @click="addOutputFieldBySelector(option.value)"
+                  >
+                    {{ option.label }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div
-            class="rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 border border-emerald-200"
-          >
-            <div class="flex items-center gap-2 text-[10px] text-emerald-600 mb-2">
-              <Layers :size="10" />
-              <span>总数据属性</span>
+
+          <div class="pt-1 border-t border-slate-200">
+            <div class="mb-2 text-xs font-medium text-slate-600">已新增字段</div>
+            <div
+              v-for="(field, index) in outputFields"
+              :key="index"
+              class="mb-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
+            >
+              <div class="mb-2 flex items-center justify-between">
+                <div class="text-xs font-medium text-slate-500">字段 #{{ index + 1 }}</div>
+                <el-button
+                  type="danger"
+                  text
+                  :disabled="outputFields.length <= 1"
+                  @click="removeOutputField(index)"
+                >
+                  删除
+                </el-button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="mb-1 block text-[11px] text-slate-500">name</label>
+                  <el-input v-model="field.name" @input="updateOutputConfig" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-[11px] text-slate-500">selector</label>
+                  <el-input :model-value="field.selector" disabled />
+                </div>
+              </div>
             </div>
-            <div class="text-2xl font-bold text-emerald-700">{{ totalProperties }}</div>
-          </div>
-          <div
-            class="rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 p-4 border border-purple-200"
-          >
-            <div class="flex items-center gap-2 text-[10px] text-purple-600 mb-2">
-              <FileText :size="10" />
-              <span>数据类型</span>
-            </div>
-            <div class="text-2xl font-bold text-purple-700">{{ uniqueDataTypes }}</div>
-          </div>
-          <div
-            class="rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 p-4 border border-amber-200"
-          >
-            <div class="flex items-center gap-2 text-[10px] text-amber-600 mb-2">
-              <Activity :size="10" />
-              <span>活跃节点</span>
-            </div>
-            <div class="text-2xl font-bold text-amber-700">{{ activeNodesCount }}</div>
           </div>
         </div>
       </div>
-      <!-- Basic Config -->
+
       <!-- <div>
         <div class="flex items-center gap-2 mb-3">
           <div class="h-4 w-0.5 rounded-full bg-purple-500"></div>
@@ -232,14 +265,14 @@
                 <div class="flex items-center gap-1">
                   <button
                     class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    @click="copyNodeData(outputNodes)"
+                    @click="copyOutputData"
                   >
                     <Copy :size="12" class="mr-1" />
                     复制
                   </button>
                   <button
                     class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    @click="downloadNodeData(outputNodes)"
+                    @click="downloadOutputData"
                   >
                     <Download :size="12" class="mr-1" />
                     下载
@@ -248,7 +281,7 @@
               </div>
               <pre
                 class="text-[11px] leading-relaxed font-mono text-slate-100 overflow-x-auto whitespace-pre-wrap break-all"
-                >{{ outputNodes }}</pre
+                >{{ formattedOutputNodes }}</pre
               >
             </div>
           </div>
@@ -272,7 +305,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   Link,
   Copy,
@@ -289,16 +322,20 @@ import {
   ChevronDown,
   FileText,
   Activity,
-  Users,
-  Layers,
 } from 'lucide-vue-next'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/stores/workflow'
+import { getOutputsByType } from '@/components/Workflow/config/nodeTypesData'
 const store = useWorkflowStore()
 
 const props = defineProps<{
   nodeId: string
+  modelValue?: any
+}>()
+
+const emit = defineEmits<{
+  'update:nodeConfig': [value: OutputField[]]
 }>()
 
 const { findNode, edges } = useVueFlow()
@@ -315,6 +352,33 @@ const { findNode, edges } = useVueFlow()
 // })
 
 const expandedNodes = ref(new Set<string>())
+
+interface OutputField {
+  type: string
+  name: string
+  selector: string
+}
+
+interface SelectorOption {
+  label: string
+  value: string
+}
+
+interface SelectorGroup {
+  nodeId: string
+  nodeName: string
+  nodeType: string
+  options: SelectorOption[]
+}
+
+const createDefaultOutputField = (index: number): OutputField => ({
+  type: 'JsonField',
+  name: `output_${index + 1}`,
+  selector: '',
+})
+
+const outputFields = ref<OutputField[]>([createDefaultOutputField(0)])
+
 // 输入数据
 const sourceNodes = computed(() => {
   if (!props.nodeId) {
@@ -340,45 +404,155 @@ const sourceNodes = computed(() => {
   findAncestors(props.nodeId)
   return Array.from(ancestors.values())
 })
+
+const selectorOptions = computed<SelectorOption[]>(() => {
+  const options: SelectorOption[] = []
+
+  sourceNodes.value.forEach((node) => {
+    const nodeName = node.name
+    const nodeData = node.data
+
+    if (node.type === 'inputs') {
+      if (!Array.isArray(nodeData)) return
+      nodeData.forEach((item: any) => {
+        if (!item || typeof item.name !== 'string' || !item.name) return
+        options.push({
+          label: `$inputs.${item.name}`,
+          value: `$inputs.${item.name}`,
+        })
+      })
+      return
+    }
+
+    const outputs = getOutputsByType(node.type)
+    outputs.forEach((outputKey: string) => {
+      options.push({
+        label: `$steps.${nodeName}.${outputKey}`,
+        value: `$steps.${nodeName}.${outputKey}`,
+      })
+    })
+  })
+
+  return Array.from(new Map(options.map((item) => [item.value, item])).values())
+})
+
+const selectorGroups = computed<SelectorGroup[]>(() => {
+  return sourceNodes.value
+    .map((node) => {
+      const nodeName = (node as any).name || node.id
+      const options: SelectorOption[] = []
+
+      if (node.type === 'inputs') {
+        const nodeData = node.data
+        if (Array.isArray(nodeData)) {
+          nodeData.forEach((item: any) => {
+            if (!item || typeof item.name !== 'string' || !item.name) return
+            const value = `$inputs.${item.name}`
+            options.push({ label: value, value })
+          })
+        }
+      } else {
+        const outputs = getOutputsByType(node.type)
+        outputs.forEach((outputKey: string) => {
+          const value = `$steps.${nodeName}.${outputKey}`
+          options.push({ label: value, value })
+        })
+      }
+
+      return {
+        nodeId: node.id,
+        nodeName: String(nodeName),
+        nodeType: node.type || '',
+        options: Array.from(new Map(options.map((item) => [item.value, item])).values()),
+      }
+    })
+    .filter((group) => group.options.length > 0)
+})
+
+const normalizeOutputFields = (value: any): OutputField[] => {
+  if (!Array.isArray(value)) {
+    return [createDefaultOutputField(0)]
+  }
+
+  const normalized = value
+    .filter((item) => item && typeof item === 'object')
+    .map((item, index) => ({
+      type: 'JsonField',
+      name: typeof item.name === 'string' && item.name.trim() ? item.name : `output_${index + 1}`,
+      selector: typeof item.selector === 'string' ? item.selector : '',
+    }))
+
+  return normalized.length > 0 ? normalized : [createDefaultOutputField(0)]
+}
+
+const fillDefaultSelector = (fields: OutputField[]) => {
+  if (!selectorOptions.value.length) return fields
+  return fields.map((field) => ({
+    ...field,
+    selector: field.selector || selectorOptions.value[0]?.value || '',
+  }))
+}
+
+const initializeOutputFields = () => {
+  outputFields.value = fillDefaultSelector(normalizeOutputFields(props.modelValue))
+}
+
+const updateOutputConfig = () => {
+  outputFields.value = outputFields.value.map((field, index) => ({
+    type: 'JsonField',
+    name: field.name?.trim() ? field.name.trim() : `output_${index + 1}`,
+    selector: field.selector || '',
+  }))
+  emit('update:nodeConfig', JSON.parse(JSON.stringify(outputFields.value)))
+}
+
+const isSelectorSelected = (selector: string) => {
+  return outputFields.value.some((field) => field.selector === selector)
+}
+
+const addOutputFieldBySelector = (selector: string) => {
+  if (!selector) return
+  if (isSelectorSelected(selector)) {
+    ElMessage.warning('该selector已添加')
+    return
+  }
+
+  const field = createDefaultOutputField(outputFields.value.length)
+  field.selector = selector
+  outputFields.value.push(field)
+  updateOutputConfig()
+}
+
+const removeOutputField = (index: number) => {
+  outputFields.value.splice(index, 1)
+  if (outputFields.value.length === 0) {
+    outputFields.value.push(createDefaultOutputField(0))
+  }
+  updateOutputConfig()
+}
 // 输出数据
 const outputNodes = computed(() => {
   if (!props.nodeId) {
     return null
   }
-  return {
-    nodes: store.getNodes,
-    edges: store.getEdges.map((item) => {
-      return {
-        id: item.id,
-        source: item.source,
-        target: item.target,
-      }
-    }),
+  return store.getSaveWorkflowData()
+})
+
+const formattedOutputNodes = computed(() => {
+  return outputNodes.value ? JSON.stringify(outputNodes.value, null, 2) : ''
+})
+
+const getNodeData = (node: Node) => node.data
+
+const getDataPropertiesCount = (data: any) => {
+  if (Array.isArray(data)) {
+    return data.length
   }
-})
-
-const totalProperties = computed(() => {
-  return sourceNodes.value.reduce((total, node) => {
-    const config = node.data?.config || []
-    return total + config.length
-  }, 0)
-})
-
-const uniqueDataTypes = computed(() => {
-  const types = new Set<string>()
-  sourceNodes.value.forEach((node) => {
-    const dataType = getDataType(node)
-    if (dataType) types.add(dataType)
-  })
-  return types.size
-})
-
-const activeNodesCount = computed(() => {
-  return sourceNodes.value.filter((node) => {
-    const config = node.data?.config || []
-    return config.length > 0
-  }).length
-})
+  if (data && typeof data === 'object') {
+    return Object.keys(data).filter((key) => key !== 'onHandleClick').length
+  }
+  return 0
+}
 
 const getNodeTypeIcon = (type: string | undefined) => {
   if (!type) return Database
@@ -396,42 +570,51 @@ const getNodeTypeIcon = (type: string | undefined) => {
 }
 
 const getNodePropertiesCount = (node: Node) => {
-  const config = node.data?.config || []
-  return config.length
+  return getDataPropertiesCount(getNodeData(node))
 }
 
 const getDataType = (node: Node) => {
-  const config = node.data?.config || []
-  if (config.length === 0) return '无数据'
+  const data = getNodeData(node)
+  if (Array.isArray(data)) {
+    if (data.length === 0) return '无数据'
+    const hasImage = data.some((prop: any) => prop.type === 'image')
+    const hasParameter = data.some((prop: any) => prop.type === 'parameter')
+    if (hasImage && hasParameter) return '混合'
+    if (hasImage) return '图片'
+    if (hasParameter) return '参数'
+    return '数组'
+  }
 
-  const hasImage = config.some((prop: any) => prop.type === 'image')
-  const hasParameter = config.some((prop: any) => prop.type === 'parameter')
-
-  if (hasImage && hasParameter) return '混合'
+  if (!data || typeof data !== 'object') return '无数据'
+  const keys = Object.keys(data).filter((key) => key !== 'onHandleClick')
+  if (keys.length === 0) return '无数据'
+  const hasImage = 'image' in data
+  const hasPredictions = 'predictions' in data
+  if (hasImage && hasPredictions) return '图像预测'
   if (hasImage) return '图片'
-  if (hasParameter) return '参数'
+  if (hasPredictions) return '预测'
+  if ('model_repository_id' in data || 'model_name' in data) return '模型配置'
+  if ('box_color' in data || 'box_thickness' in data) return '可视化配置'
   return '其他'
 }
 
 const getNodeStatusType = (node: Node) => {
-  const config = node.data?.config || []
-  if (config.length === 0) return 'warning'
+  if (getDataPropertiesCount(getNodeData(node)) === 0) return 'warning'
   return 'success'
 }
 
 const getNodeStatusText = (node: Node) => {
-  const config = node.data?.config || []
-  if (config.length === 0) return '未配置'
+  if (getDataPropertiesCount(getNodeData(node)) === 0) return '未配置'
   return '已配置'
 }
 
 const formatNodeData = (node: any) => {
-  const data = node.data
+  const data = node?.data
   const formatted = {
-    id: node.id,
-    type: node.type,
-    label: data?.label || node.type,
-    config: data?.config || [],
+    id: node?.id,
+    type: node?.type,
+    name: node?.name || data?.label || node?.type,
+    data: data || {},
   }
   return JSON.stringify(formatted, null, 2)
 }
@@ -444,50 +627,114 @@ const toggleNodeExpand = (nodeId: string) => {
   }
 }
 
-const copyNodeData = (node: any) => {
-  const data = formatNodeData(node)
-  navigator.clipboard
-    .writeText(data)
-    .then(() => {
-      ElMessage.success('已复制节点数据')
-    })
-    .catch(() => {
-      ElMessage.error('复制失败')
-    })
+const fallbackCopyText = (text: string) => {
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', 'readonly')
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const copied = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return copied
+  } catch {
+    return false
+  }
 }
 
-const downloadNodeData = (node: any) => {
+const copyText = async (text: string, successMsg: string, errorMsg: string) => {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      ElMessage.success(successMsg)
+      return
+    }
+    const copied = fallbackCopyText(text)
+    if (copied) {
+      ElMessage.success(successMsg)
+      return
+    }
+    ElMessage.error(errorMsg)
+  } catch {
+    const copied = fallbackCopyText(text)
+    if (copied) {
+      ElMessage.success(successMsg)
+      return
+    }
+    ElMessage.error(errorMsg)
+  }
+}
+
+const copyNodeData = async (node: any) => {
   const data = formatNodeData(node)
-  const blob = new Blob([data], { type: 'application/json' })
+  await copyText(data, '已复制节点数据', '复制失败')
+}
+
+const copyOutputData = async () => {
+  if (!formattedOutputNodes.value) {
+    ElMessage.warning('暂无输出数据')
+    return
+  }
+  await copyText(formattedOutputNodes.value, '已复制输出数据', '复制失败')
+}
+
+const downloadText = (text: string, filename: string, successMsg: string) => {
+  const blob = new Blob([text], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${node.type}_${node.id.slice(-6)}.json`
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
-  ElMessage.success('已下载节点数据')
+  ElMessage.success(successMsg)
+}
+
+const downloadNodeData = (node: any) => {
+  const data = formatNodeData(node)
+  const fileName = `${node.type}_${String(node.id || '').slice(-6)}.json`
+  downloadText(data, fileName, '已下载节点数据')
+}
+
+const downloadOutputData = () => {
+  if (!formattedOutputNodes.value) {
+    ElMessage.warning('暂无输出数据')
+    return
+  }
+  downloadText(formattedOutputNodes.value, `output_data_${Date.now()}.json`, '已下载输出数据')
 }
 
 const exportAllData = () => {
   const allData = sourceNodes.value.map((node) => ({
     id: node.id,
     type: node.type,
-    label: node.data?.label || node.type,
-    config: node.data?.config || [],
+    name: (node as any).name || node.type,
+    data: node.data || {},
   }))
 
   const data = JSON.stringify(allData, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `output_data_${Date.now()}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  ElMessage.success('已导出所有数据')
+  downloadText(data, `source_nodes_data_${Date.now()}.json`, '已导出所有数据')
 }
+
+watch(
+  () => props.modelValue,
+  () => initializeOutputFields(),
+  { deep: true, immediate: true },
+)
+
+watch(
+  selectorOptions,
+  () => {
+    const merged = fillDefaultSelector(outputFields.value)
+    const changed = JSON.stringify(merged) !== JSON.stringify(outputFields.value)
+    if (changed) {
+      outputFields.value = merged
+      updateOutputConfig()
+    }
+  },
+  { deep: true },
+)
 </script>

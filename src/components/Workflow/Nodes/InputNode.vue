@@ -40,9 +40,9 @@
     </div>
 
     <div class="p-3" v-if="selected">
-      <div v-if="config && config.length > 0" class="space-y-2">
+      <div v-if="data && data.length > 0" class="space-y-2">
         <div
-          v-for="(property, index) in config"
+          v-for="(property, index) in data"
           :key="index"
           class="flex items-center justify-between p-1.5 rounded-lg border border-slate-100 transition-all cursor-pointer"
         >
@@ -95,7 +95,7 @@
         <p class="text-sm font-medium text-slate-600">添加输入属性</p>
       </div>
 
-      <div v-if="config && config.length > 0" class="mt-3">
+      <div v-if="data && data.length > 0" class="mt-3">
         <button
           class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-emerald-700 text-xs font-medium cursor-pointer"
           :class="`bg-${nodeColor}-50 text-${nodeColor}-700 hover:bg-${nodeColor}-100 transition-colors border border-${nodeColor}-200`"
@@ -113,11 +113,6 @@
       :node-id="props.id"
       color="emerald"
       :show-tooltip="true"
-      @handle-click="
-        (event: MouseEvent, type: 'source' | 'target', nodeId: string) => {
-          onHandleClick?.(event, type, nodeId)
-        }
-      "
     />
   </div>
 </template>
@@ -131,10 +126,16 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
 
+interface Property {
+  name: string
+  type: 'parameter' | 'image'
+  valueType?: 'string' | 'number' | 'boolean' | 'array' | 'object' | undefined
+  defaultValue?: string | undefined
+}
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
-  data: any
+  data: Array<Property>
   selected?: boolean
   type: string
 }>()
@@ -142,63 +143,47 @@ const props = defineProps<{
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
 
-const onHandleClick = computed(() => {
-  return props.data?.onHandleClick as (
-    event: MouseEvent,
-    handleType: 'source' | 'target',
-    nodeId: string,
-  ) => void | undefined
-})
-
-interface Property {
-  name: string
-  type: 'parameter' | 'image'
-  valueType?: 'string' | 'number' | 'boolean' | 'array' | 'object' | undefined
-  defaultValue?: string | undefined
-}
-
-const config = ref<Property[]>([])
+const data = ref<Property[]>([])
 
 const initializeProperties = () => {
-  console.log('props.data.config', props.data.config)
-  if (props.data && props.data.config) {
+  // 判断是否是空数组
+  if (props.data.length === 0) {
     // 深拷贝配置
-    config.value = JSON.parse(JSON.stringify(props.data.config))
+    data.value = []
   } else {
-    config.value = []
+    data.value = JSON.parse(JSON.stringify(props.data))
   }
   updateIsShowTip()
 }
 
 const removeProperty = (index: number) => {
-  config.value.splice(index, 1)
+  data.value.splice(index, 1)
   updateNodeData()
   updateIsShowTip()
 }
 
 const addProperty = () => {
-  config.value.push({
-    name: config.value.length > 0 ? 'img' + (config.value.length + 1) : 'img',
+  data.value.push({
+    name: data.value.length > 0 ? 'image' + (data.value.length + 1) : 'image',
     type: 'image',
   })
   updateNodeData()
 }
 
 const updateNodeData = () => {
-  const nodeData = { ...props.data }
-  nodeData.config = JSON.parse(JSON.stringify(config.value))
-  store.updateNode(props.id, nodeData.config)
+  console.log('添加节点属性', JSON.parse(JSON.stringify(data.value)))
+  store.updateNode(props.id, JSON.parse(JSON.stringify(data.value)))
   updateIsShowTip()
 }
 
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  if (!config.value || config.value.length === 0) {
+  if (data.value.length === 0) {
     TipContent.value = '输入节点至少添加一个输入参数'
     isShowTip.value = true
   } else {
-    const hasEmptyName = config.value.some((prop) => !prop.name)
+    const hasEmptyName = data.value.some((prop) => !prop.name)
     if (hasEmptyName) {
       TipContent.value = '【属性名称】不能为空'
       isShowTip.value = true

@@ -54,12 +54,12 @@
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400 tracking-[1px]">图片</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ properties?.images || '请选择图片...' }}
+                {{ props.data?.images || '请选择图片...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.images"
+            v-if="props.data?.images"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -82,12 +82,12 @@
             <div class="flex-1 min-w-0">
               <div class="text-[10px] text-slate-400 tracking-[1px]">模型</div>
               <div class="text-xs font-medium text-slate-500 truncate">
-                {{ properties?.model_name || '请选择模型...' }}
+                {{ props.data?.model_name || '请选择模型...' }}
               </div>
             </div>
           </div>
           <div
-            v-if="properties?.model_name"
+            v-if="props.data?.model_name"
             class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center"
           >
             <CheckCircle :size="12" class="text-emerald-600" />
@@ -101,19 +101,13 @@
         </div>
       </div>
 
-      <CustomHandle
-        type="target"
-        :position="Position.Left"
-        :node-id="props.id"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
-      />
+      <CustomHandle type="target" :position="Position.Left" :node-id="props.id" />
       <CustomHandle
         type="source"
         :position="Position.Right"
         :node-id="props.id"
         :color="nodeColor"
         :show-tooltip="true"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
       />
     </div>
   </div>
@@ -135,15 +129,6 @@ const props = defineProps<{
   selected?: boolean
   type: string
 }>()
-const properties = computed(() => props.data?.config?.[0] || {})
-const onHandleClick = computed(() => {
-  return props.data?.onHandleClick as (
-    event: MouseEvent,
-    handleType: 'source' | 'target',
-    nodeId: string,
-  ) => void | undefined
-})
-
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
 
@@ -159,10 +144,10 @@ const initializeProperties = () => {
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
-  if (!props.data?.config?.[0]?.images) {
+  if (!props.data?.images) {
     TipContent.value = '请选择图片'
     isShowTip.value = true
-  } else if (!props.data?.config?.[0]?.model_id) {
+  } else if (!props.data?.model_name) {
     TipContent.value = '请选择模型'
     isShowTip.value = true
   } else {

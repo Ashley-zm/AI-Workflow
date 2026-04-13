@@ -109,6 +109,34 @@
           </el-select>
         </div>
 
+        <!-- <div class="flex items-center gap-4">
+          <label class="block text-xs font-medium text-slate-700">
+            类别标签 <span class="text-red-500">*</span>
+          </label>
+          <span class="text-gray-600 text-sm ">
+            {{ data.labels?.toString() }}
+          </span>
+        </div> -->
+        <div class="flex items-center gap-4">
+          <label class="block text-xs font-medium text-slate-700">
+            失败标签 <span class="text-red-500">*</span>
+          </label>
+          <el-select
+            v-model="data.fail_labels"
+            size="default"
+            class="flex-1"
+            filterable
+            clearable
+            placeholder="请选择失败标签"
+          >
+            <el-option
+              v-for="version in data.labels"
+              :key="version"
+              :label="version"
+              :value="version"
+            />
+          </el-select>
+        </div>
         <div class="flex items-center gap-4">
           <label class="block text-xs font-medium text-slate-700">
             是否选择最新版本 <span class="text-red-500">*</span>
@@ -184,29 +212,21 @@
         </div>
 
         <div>
-          <label class="mb-2 block text-xs font-medium text-slate-700">IOU阈值</label>
+          <label class="mb-2 block text-xs font-medium text-slate-700">Top-K预测</label>
           <div class="flex items-center gap-3">
             <el-slider
-              v-model="data.iou_threshold"
+              v-model="data.top_k"
               :min="0"
-              :max="1"
-              :step="0.01"
+              :max="10"
+              :step="1"
               class="flex-1"
               @change="updateConfig"
             />
             <span class="w-16 text-right text-xs text-slate-500">
-              {{ Number(data.iou_threshold ?? 0).toFixed(2) }}
+              {{ Number(data.top_k ?? 5) }}
             </span>
           </div>
         </div>
-        <!-- 
-        <div
-          v-if="selectedModelInfo"
-          class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"
-        >
-          <div class="mb-1 font-semibold text-slate-700">{{ selectedModelInfo.name }}</div>
-          <div>{{ selectedModelInfo.description || '暂无描述' }}</div>
-        </div> -->
       </div>
     </div>
 
@@ -323,7 +343,9 @@ interface Property {
   model_version_name?: string
   device?: string
   confidence_threshold?: number
-  iou_threshold?: number
+  top_k?: number
+  labels: string[] | undefined
+  fail_labels?: string
 }
 
 const props = defineProps<{
@@ -348,7 +370,9 @@ const defaultData = (): Property => ({
   model_version_name: undefined,
   device: undefined,
   confidence_threshold: 0.5,
-  iou_threshold: 0.45,
+  top_k: 5,
+  labels: [],
+  fail_labels: undefined,
 })
 
 const data = ref<Property>(defaultData())
@@ -383,9 +407,11 @@ const syncModelFields = (autoChooseVersion = false) => {
     data.value.model_version_name = undefined
     return
   }
-  console.log('selectedModelInfo', selectedModelInfo)
 
   data.value.model_name = selectedModelInfo.value.name
+  data.value.labels = selectedModelInfo.value.labels
+  data.value.fail_labels = selectedModelInfo.value.labels ? selectedModelInfo.value.labels[0] : ''
+
   const versions = selectedModelVersions.value
   const activeVersion =
     versions.find((item) => item.id === data.value.model_version_id) ||
@@ -489,6 +515,7 @@ const getModelList = async () => {
 
   try {
     const res = await getModelServiceList({
+      // algorithmTypeDictId: 'detection',
       algorithmTypeDictId: type[props.nodeObj.type] || '',
       pageNum: 1,
       pageSize: 1000,
@@ -511,7 +538,7 @@ const getModelList = async () => {
     if (!data.value.model_repository_id && modelList.value.length > 0) {
       data.value.model_repository_id = modelList.value[0]?.id
       syncModelFields(true)
-      data.value.iou_threshold = 0.5
+      data.value.top_k = 0.5
       data.value.confidence_threshold = 0.45
     } else {
       syncModelFields(false)

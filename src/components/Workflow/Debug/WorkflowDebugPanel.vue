@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="max-h-[calc(90vh-120px)] overflow-y-auto">
+    <el-scrollbar max-height="calc(90vh - 120px)">
       <!-- 统计概览 -->
       <section class="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
         <div class="mb-3 flex items-center justify-between">
@@ -53,14 +53,14 @@
           </div>
           <div
             class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
-            :class="
-              graphStatus.isConnected
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700'
-            "
+            :class="healthBadgeClass"
           >
-            <component :is="graphStatus.isConnected ? CheckCircle : AlertTriangle" :size="12" />
-            {{ graphStatus.isConnected ? '拓扑正常' : '存在警告' }}
+            <component
+              :is="healthBadgeIcon"
+              :size="12"
+              :class="{ 'animate-spin': workflowHealthStatus === 'checking' }"
+            />
+            {{ healthBadgeText }}
           </div>
         </div>
 
@@ -91,56 +91,23 @@
           <span class="text-xs font-semibold text-slate-700">图健康检查</span>
         </div>
 
-        <div class="space-y-2">
-          <div
-            v-if="graphStatus.orphanNodes.length"
-            class="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 border border-red-100"
-          >
-            <AlertCircle :size="14" class="text-red-500 mt-0.5 flex-shrink-0" />
-            <div class="flex-1">
-              <div class="text-xs font-medium text-red-700">孤立节点</div>
-              <div class="text-[10px] text-red-600 mt-0.5">
-                {{ graphStatus.orphanNodes.join(', ') }}
+        <div v-if="workflowHealthStatus === 'checking'" class="py-4 text-slate-500">
+          <div class="flex items-center gap-2 text-xs">
+            <Loader2 :size="14" class="animate-spin" />
+            <span>正在检查...</span>
+          </div>
+        </div>
+
+        <div v-else class="space-y-2">
+          <div class="rounded-lg border p-2.5" :class="healthSummaryClass">
+            <div class="flex items-start gap-2">
+              <component :is="healthSummaryIcon" :size="14" class="mt-0.5 flex-shrink-0" />
+              <div class="flex-1">
+                <div class="text-xs font-medium" :class="healthTitleClass">
+                  {{ workflowHealthSummaryTitle }}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div
-            v-if="graphStatus.danglingEdges.length"
-            class="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 border border-amber-100"
-          >
-            <AlertTriangle :size="14" class="text-amber-500 mt-0.5 flex-shrink-0" />
-            <div class="flex-1">
-              <div class="text-xs font-medium text-amber-700">悬空边</div>
-              <div class="text-[10px] text-amber-600 mt-0.5">
-                {{ graphStatus.danglingEdges.join(', ') }}
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="graphStatus.deadEndNodes.length"
-            class="flex items-start gap-2 rounded-lg bg-orange-50 p-2.5 border border-orange-100"
-          >
-            <AlertTriangle :size="14" class="text-orange-500 mt-0.5 flex-shrink-0" />
-            <div class="flex-1">
-              <div class="text-xs font-medium text-orange-700">死路节点</div>
-              <div class="text-[10px] text-orange-600 mt-0.5">
-                {{ graphStatus.deadEndNodes.join(', ') }}
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="
-              !graphStatus.orphanNodes.length &&
-              !graphStatus.danglingEdges.length &&
-              !graphStatus.deadEndNodes.length
-            "
-            class="flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 border border-emerald-100"
-          >
-            <CheckCircle :size="14" class="text-emerald-500" />
-            <div class="text-xs font-medium text-emerald-700">未发现明显结构问题</div>
           </div>
         </div>
       </section>
@@ -310,7 +277,7 @@
                   :placeholder="`请输入合法 JSON，默认值：${prop.defaultValue ?? ''}`"
                   rows="3"
                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all font-mono"
-                  @change="onInputChange(prop, ($event.target as HTMLTextAreaElement).value)"
+                  @input="onInputChange(prop, ($event.target as HTMLTextAreaElement).value)"
                 />
                 <div class="flex items-center justify-between">
                   <p class="text-[10px] text-slate-400">例如 [1,2,3] 或 {"k":"v"}</p>
@@ -547,22 +514,28 @@
           </div>
         </div>
       </section>
-    </div>
+    </el-scrollbar>
 
     <!-- 底部操作栏 -->
     <div class="border-t border-slate-200 bg-slate-50 px-4 py-3">
       <div class="flex items-center justify-between">
         <div class="text-[10px] text-slate-500">
           <span class="font-medium">{{ canStartDebug ? '就绪' : '未就绪' }}</span>
-          · {{ inputProperties.length }} 个输入 · {{ nodes.length }} 个节点
+          · {{ hasWorkflowId ? 'ID已就绪' : 'ID缺失' }} · {{ inputProperties.length }} 个输入 ·
+          {{ nodes.length }} 个节点
+          <span v-if="!canStartDebug && debugDisableReason" class="text-amber-600">
+            · {{ debugDisableReason }}
+          </span>
         </div>
         <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-xs font-medium text-white shadow-md hover:from-blue-600 hover:to-blue-700 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 transition-all"
-          :disabled="!canStartDebug || debugState === 'running'"
+          class="inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-xs font-medium text-white shadow-md hover:from-blue-600 hover:to-blue-700 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 transition-all"
+          :disabled="
+            !canStartDebug || debugState === 'running' || workflowHealthStatus !== 'healthy'
+          "
           @click="handleStartDebug"
         >
           <Play :size="14" />
-          开始调试
+          {{ debugState === 'running' ? '调试中...' : '开始调试' }}
         </button>
       </div>
     </div>
@@ -587,7 +560,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import type { Node, Edge } from '@vue-flow/core'
 import {
   Bug,
@@ -612,7 +586,9 @@ import {
   Square,
 } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import { workflowApi } from '@/api'
+import { useWorkflowStore } from '@/stores/workflow'
+import type { AddOrUpdateWorkflowRequest } from '@/types/workflow-api'
 
 interface DebugOutput {
   nodeId: string
@@ -639,28 +615,34 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (
-    e: 'start-debug',
-    payload: { inputValues: Record<string, any>; nodes: Node[]; edges: Edge[] },
-  ): void
+  (e: 'recheck'): void
 }>()
 
+const store = useWorkflowStore()
+const { workflowHealthStatus, workflowHealthSummaryTitle } = storeToRefs(store)
 const debugState = ref<'idle' | 'running' | 'completed'>('idle')
 const debugOutput = ref<DebugOutput[]>([])
 const executionLogs = ref<ExecutionLog[]>([])
 const outputDetailExpanded = ref<Record<number, boolean>>({})
 const currentExecutingNode = ref('')
 const executionProgress = ref(0)
-const abortController = ref<AbortController | null>(null)
 
 const showImagePreview = ref(false)
 const previewImageUrl = ref('')
 
 const inputNode = computed(() => props.nodes.find((n) => n.type === 'inputs') || null)
 const inputProperties = computed<any[]>(() => {
-  const data: any = inputNode.value?.data || {}
-  const properties = data.properties || data.config || []
-  return Array.isArray(properties) ? properties : []
+  const data: any = inputNode.value?.data
+  if (Array.isArray(data)) {
+    return data
+  }
+  if (Array.isArray(data?.properties)) {
+    return data.properties
+  }
+  if (Array.isArray(data?.config)) {
+    return data.config
+  }
+  return []
 })
 
 const inputValues = ref<Record<string, any>>({})
@@ -698,7 +680,7 @@ const initInputValues = (preserveExisting: boolean = false) => {
     const name = prop.name || ''
     if (!name) return
 
-    if (preserveExisting && name in inputValues.value && inputValues.value[name]) {
+    if (preserveExisting && name in inputValues.value) {
       result[name] = inputValues.value[name]
       return
     }
@@ -837,7 +819,7 @@ const handleImageUrlInput = (name: string, url: string) => {
 
 const getImagePreview = (name: string): string | null => {
   const value = inputValues.value[name]
-  if (!value) return null
+  if (typeof value !== 'string' || !value) return null
 
   if (value.startsWith('data:')) {
     return value
@@ -852,7 +834,7 @@ const getImagePreview = (name: string): string | null => {
 
 const getImageUrl = (name: string): string => {
   const value = inputValues.value[name]
-  if (!value) return ''
+  if (typeof value !== 'string' || !value) return ''
   if (value.startsWith('data:')) return ''
   return value
 }
@@ -907,6 +889,7 @@ const handleResetInput = (prop: any) => {
 }
 
 const handleResetInputs = () => {
+  emit('recheck')
   initInputValues(false)
   imageInputType.value = {}
 }
@@ -961,254 +944,244 @@ const previewImage = (url: string) => {
   showImagePreview.value = true
 }
 
+const hasSubmittedInputs = computed(() => {
+  const submittedInputs = getSubmittedDebugInputs(inputValues.value)
+  return Object.keys(submittedInputs).length > 0
+})
+
+const hasWorkflowId = computed(() => {
+  return String(store.workflowInfo.id ?? '').trim().length > 0
+})
+
+const debugDisableReason = computed(() => {
+  if (!hasWorkflowId.value) return '工作流ID缺失'
+  if (!hasSubmittedInputs.value) return '请输入调试参数'
+  return ''
+})
+
 const canStartDebug = computed(() => {
-  return inputProperties.value.length > 0 && graphStatus.value.isConnected
+  return !debugDisableReason.value
 })
 
-const graphStatus = computed(() => {
-  const nodeIds = new Set(props.nodes.map((n) => n.id))
-
-  const incoming: Record<string, number> = {}
-  const outgoing: Record<string, number> = {}
-  props.nodes.forEach((n) => {
-    const id = n.id as string
-    incoming[id] = 0
-    outgoing[id] = 0
-  })
-
-  props.edges.forEach((e) => {
-    const source = e.source as string
-    const target = e.target as string
-    if (outgoing[source] !== undefined) outgoing[source]++
-    if (incoming[target] !== undefined) incoming[target]++
-  })
-
-  const orphanNodes: string[] = []
-  props.nodes.forEach((n) => {
-    const id = n.id as string
-    const label = (n.data?.label as string) || n.type || id
-    if (n.type !== 'inputs' && n.type !== 'outputs') {
-      if (incoming[id] === 0 && outgoing[id] === 0) {
-        orphanNodes.push(label as string)
-      }
-    }
-  })
-
-  const danglingEdges: string[] = []
-  props.edges.forEach((e) => {
-    if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) {
-      danglingEdges.push(e.id)
-    }
-  })
-
-  const deadEndNodes: string[] = []
-  props.nodes.forEach((n) => {
-    const id = n.id as string
-    const label = (n.data?.label as string) || n.type || id
-    if (n.type !== 'outputs' && (outgoing[id] ?? 0) === 0 && (incoming[id] ?? 0) > 0) {
-      deadEndNodes.push(label as string)
-    }
-  })
-
-  return {
-    isConnected: orphanNodes.length === 0 && danglingEdges.length === 0,
-    orphanNodes,
-    danglingEdges,
-    deadEndNodes,
-  }
+const healthBadgeClass = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return 'bg-emerald-100 text-emerald-700'
+  if (workflowHealthStatus.value === 'error') return 'bg-red-100 text-red-700'
+  if (workflowHealthStatus.value === 'checking') return 'bg-blue-100 text-blue-700'
+  return 'bg-amber-100 text-amber-700'
 })
 
-const executeNode = async (node: Node, inputData: any): Promise<DebugOutput> => {
-  const startTime = Date.now()
-  const nodeName = (node.data?.label as string) || node.type || node.id
+const healthBadgeIcon = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return CheckCircle
+  if (workflowHealthStatus.value === 'error') return XCircle
+  if (workflowHealthStatus.value === 'checking') return Loader2
+  return AlertTriangle
+})
 
-  addExecutionLog('info', `开始执行节点: ${nodeName}`)
-  currentExecutingNode.value = nodeName
+const healthBadgeText = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return '图健康'
+  if (workflowHealthStatus.value === 'error') return '存在错误'
+  if (workflowHealthStatus.value === 'checking') return '检查中'
+  return '存在警告'
+})
 
-  try {
-    let result: any = {}
-    let images: string[] = []
+const healthSummaryClass = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return 'bg-green-50 border-green-200'
+  if (workflowHealthStatus.value === 'warning') return 'bg-yellow-50 border-yellow-200'
+  if (workflowHealthStatus.value === 'error') return 'bg-red-50 border-red-200'
+  return 'bg-blue-50 border-blue-200'
+})
 
-    switch (node.type) {
-      case 'inputs':
-        result = inputData
-        break
+const healthTitleClass = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return 'text-green-800'
+  if (workflowHealthStatus.value === 'warning') return 'text-yellow-800'
+  if (workflowHealthStatus.value === 'error') return 'text-red-800'
+  return 'text-blue-800'
+})
 
-      case 'object-detection-model':
-      case 'classification-model':
-      case 'segmentation-model':
-        const apiUrl = (node.data?.config as any)?.apiUrl || 'https://api.example.com/predict'
-        const apiKey = (node.data?.config as any)?.apiKey || ''
+const healthSummaryIcon = computed(() => {
+  if (workflowHealthStatus.value === 'healthy') return CheckCircle
+  if (workflowHealthStatus.value === 'warning') return AlertTriangle
+  if (workflowHealthStatus.value === 'error') return XCircle
+  return Loader2
+})
 
-        addExecutionLog('info', `调用 API: ${apiUrl}`)
-
-        const response = await axios.post(
-          apiUrl,
-          {
-            input: inputData,
-            model: (node.data?.config as any)?.modelId || 'default',
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-            },
-            signal: abortController.value?.signal,
-            timeout: 30000,
-          },
-        )
-
-        result = response.data
-        if (result.image) {
-          images.push(result.image)
-        }
-        break
-
-      case 'bounding-box-visualization':
-      case 'polygon-visualization':
-      case 'label-visualization':
-        result = {
-          visualization: true,
-          inputImage: inputData.image || inputData,
-          config: node.data?.config,
-        }
-        if (inputData.image) {
-          images.push(inputData.image)
-        }
-        break
-
-      case 'outputs':
-        result = inputData
-        if (inputData.image) {
-          images.push(inputData.image)
-        }
-        break
-
-      default:
-        result = inputData
-    }
-
-    const duration = Date.now() - startTime
-    addExecutionLog('info', `节点执行完成: ${nodeName} (${duration}ms)`)
-
-    return {
-      nodeId: node.id,
-      nodeName,
-      status: 'success',
-      duration,
-      data: result,
-      images: images.length > 0 ? images : undefined,
-    }
-  } catch (error: any) {
-    const duration = Date.now() - startTime
-    const errorMessage = error.response?.data?.message || error.message || '未知错误'
-    addExecutionLog('error', `节点执行失败: ${nodeName} - ${errorMessage}`)
-
-    return {
-      nodeId: node.id,
-      nodeName,
-      status: 'error',
-      duration,
-      error: errorMessage,
-    }
-  }
+const isEmptyDebugValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return true
+  if (typeof value === 'string') return value.trim().length === 0
+  if (typeof value === 'number') return Number.isNaN(value)
+  if (typeof value === 'boolean') return false
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length === 0
+  return false
 }
 
-const getExecutionOrder = (): Node[] => {
-  const order: Node[] = []
-  const visited = new Set<string>()
-  const visiting = new Set<string>()
-
-  const nodeMap = new Map<string, Node>()
-  props.nodes.forEach((n) => nodeMap.set(n.id, n))
-
-  const adjacency = new Map<string, string[]>()
-  props.nodes.forEach((n) => adjacency.set(n.id, []))
-  props.edges.forEach((e) => {
-    const targets = adjacency.get(e.source) || []
-    targets.push(e.target)
-    adjacency.set(e.source, targets)
+const getSubmittedDebugInputs = (inputValues: Record<string, any>) => {
+  const result: Record<string, any> = {}
+  Object.entries(inputValues || {}).forEach(([key, value]) => {
+    if (isEmptyDebugValue(value)) return
+    result[key] = value
   })
+  return result
+}
 
-  const dfs = (nodeId: string) => {
-    if (visited.has(nodeId)) return
-    if (visiting.has(nodeId)) return
-
-    visiting.add(nodeId)
-
-    const incomingEdges = props.edges.filter((e) => e.target === nodeId)
-    for (const edge of incomingEdges) {
-      dfs(edge.source)
+const markDebugCompleted = () => {
+  debugState.value = 'completed'
+  currentExecutingNode.value = ''
+  executionProgress.value = 0
+  setTimeout(() => {
+    if (debugState.value === 'completed') {
+      debugState.value = 'idle'
     }
-
-    visiting.delete(nodeId)
-    visited.add(nodeId)
-    const node = nodeMap.get(nodeId)
-    if (node) order.push(node)
-  }
-
-  props.nodes.forEach((n) => dfs(n.id))
-
-  return order
+  }, 200)
 }
 
 const handleStartDebug = async () => {
+  console.log('handleStartDebug', debugState.value)
   if (debugState.value === 'running') return
+
+  if (debugDisableReason.value) {
+    const warnMessage = `${debugDisableReason.value}，无法开始调试`
+    ElMessage.warning(warnMessage)
+    addExecutionLog('warn', warnMessage)
+    return
+  }
+
+  const submittedInputs = getSubmittedDebugInputs(inputValues.value)
+  if (!Object.keys(submittedInputs).length) {
+    ElMessage.warning('调试提交数据为空，请先填写输入参数')
+    addExecutionLog('warn', '调试提交数据为空，请先填写输入参数')
+    return
+  }
+
+  const id = String(store.workflowInfo.id ?? '').trim()
+  const workflowName = String(store.workflowInfo.workflowName ?? '').trim()
+  const workflowId = String(store.workflowInfo.workflowId ?? '').trim()
+  const workflowClass = String(store.workflowInfo.workflowClass ?? '').trim()
+  if (!id || !workflowName || !workflowId || !workflowClass) {
+    ElMessage.warning('工作流基础信息不完整，无法发起调试')
+    addExecutionLog('warn', '工作流基础信息不完整，无法发起调试')
+    return
+  }
 
   debugState.value = 'running'
   debugOutput.value = []
-  executionProgress.value = 0
-  abortController.value = new AbortController()
+  executionProgress.value = 10
+  currentExecutingNode.value = '保存工作流'
 
   addExecutionLog('info', '开始调试工作流')
-  addExecutionLog('info', `输入参数: ${JSON.stringify(inputValues.value)}`)
+  addExecutionLog('info', `输入参数: ${JSON.stringify(submittedInputs)}`)
+  const startTime = Date.now()
 
-  const executionOrder = getExecutionOrder()
-  const totalNodes = executionOrder.length
-
-  let currentData: any = { ...inputValues.value }
-
-  for (let i = 0; i < executionOrder.length; i++) {
-    if (abortController.value?.signal.aborted) {
-      addExecutionLog('warn', '调试已被用户中止')
-      break
-    }
-
-    const node = executionOrder[i]
-    if (!node) continue
-
-    const output = await executeNode(node, currentData)
-    debugOutput.value.push(output)
-    executionProgress.value = Math.round(((i + 1) / totalNodes) * 100)
-
-    if (output.status === 'success' && output.data) {
-      currentData = { ...currentData, ...output.data }
-    }
-
-    if (output.status === 'error') {
-      addExecutionLog('error', '工作流执行中断')
-      break
-    }
+  const savePayload: AddOrUpdateWorkflowRequest = {
+    id,
+    workflowName,
+    workflowId,
+    workflowClass,
+    description: store.workflowInfo.description,
+    workflowJsonData: store.getSaveWorkflowData(),
   }
 
-  debugState.value = 'completed'
-  currentExecutingNode.value = ''
-  addExecutionLog('info', '调试完成')
+  try {
+    const saveResponse = await workflowApi.addOrUpdateWorkflow(savePayload)
 
-  emit('start-debug', {
-    inputValues: { ...inputValues.value },
-    nodes: props.nodes,
-    edges: props.edges,
-  })
+    if (saveResponse.code !== 200) {
+      ElMessage.error(saveResponse.msg || '调试前保存工作流失败')
+      addExecutionLog('error', saveResponse.msg || '调试前保存工作流失败')
+      debugOutput.value = [
+        {
+          nodeId: 'workflow-debug',
+          nodeName: '工作流调试',
+          status: 'error',
+          duration: Date.now() - startTime,
+          error: saveResponse.msg || '调试前保存工作流失败',
+        },
+      ]
+      markDebugCompleted()
+      return
+    }
+
+    executionProgress.value = 50
+    currentExecutingNode.value = '调用调试接口'
+
+    const executeResponse = await workflowApi.executeWorkflow({
+      workflowId,
+      inputJson: {
+        inputs: submittedInputs,
+      },
+    })
+    console.log('executeResponse顶顶顶顶', executeResponse)
+
+    if (executeResponse.code !== 200 || !executeResponse.data) {
+      ElMessage.error(executeResponse.msg || '调试接口调用失败')
+      addExecutionLog('error', executeResponse.msg || '调试接口调用失败')
+      debugOutput.value = [
+        {
+          nodeId: 'workflow-debug',
+          nodeName: '工作流调试',
+          status: 'error',
+          duration: Date.now() - startTime,
+          error: executeResponse.msg || '调试接口调用失败',
+        },
+      ]
+      markDebugCompleted()
+      return
+    }
+
+    executionProgress.value = 100
+    currentExecutingNode.value = ''
+    debugOutput.value = [
+      {
+        nodeId: 'workflow-debug',
+        nodeName: '工作流调试',
+        status: 'success',
+        duration: Date.now() - startTime,
+        data: executeResponse.data,
+        images: executeResponse.data.executeResult?.results.annotated_image
+          ? [String(executeResponse.data.executeResult?.results.annotated_image)]
+          : undefined,
+      },
+    ]
+    addExecutionLog('info', '调试接口调用成功')
+    ElMessage.success('调试接口调用成功')
+    markDebugCompleted()
+  } catch (error) {
+    console.error('调试流程异常:', error)
+    ElMessage.error('调试流程异常，请稍后重试')
+    addExecutionLog('error', '调试流程异常，请稍后重试')
+    debugOutput.value = [
+      {
+        nodeId: 'workflow-debug',
+        nodeName: '工作流调试',
+        status: 'error',
+        duration: Date.now() - startTime,
+        error: '调试流程异常，请稍后重试',
+      },
+    ]
+    markDebugCompleted()
+  }
 }
 
 const handleStopDebug = () => {
-  if (abortController.value) {
-    abortController.value.abort()
-    debugState.value = 'completed'
-    addExecutionLog('warn', '用户中止调试')
-  }
+  debugState.value = 'idle'
+  currentExecutingNode.value = ''
+  addExecutionLog('warn', '用户中止调试')
 }
+
+watch(
+  () => debugOutput.value,
+  (list) => {
+    if (!list.length) {
+      outputDetailExpanded.value = {}
+      return
+    }
+    const expanded: Record<number, boolean> = {}
+    list.forEach((_, index) => {
+      expanded[index] = true
+    })
+    outputDetailExpanded.value = expanded
+  },
+  { deep: true },
+)
 
 watch(
   () => inputProperties.value,

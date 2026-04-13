@@ -1,10 +1,38 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Node, Edge } from '@vue-flow/core'
 import { useHistoryStore } from './history'
+import type {
+  AddOrUpdateTemplateRequest,
+  AddOrUpdateWorkflowRequest,
+  WorkflowEntity,
+} from '@/types/workflow-api'
+import { ElMessage } from 'element-plus'
 // import { MarkerType } from '@vue-flow/core'
+
+interface WorkflowViewportInfo {
+  x: number
+  y: number
+  zoom: number
+}
+
+export type WorkflowHealthStatus = 'checking' | 'healthy' | 'warning' | 'error'
+
 export const useWorkflowStore = defineStore('workflow', () => {
   const historyStore = useHistoryStore()
+  const defaultWorkflowInfo: WorkflowEntity = {
+    id: '',
+    workflowName: '',
+    workflowId: '',
+    workflowClass: '',
+    description: '',
+    workflowJsonData: undefined,
+  }
+  const defaultViewportInfo: WorkflowViewportInfo = {
+    x: 0,
+    y: 0,
+    zoom: 1,
+  }
 
   // 初始化历史记录
   const initializeHistory = () => {
@@ -12,29 +40,407 @@ export const useWorkflowStore = defineStore('workflow', () => {
     // 记录初始状态
     historyStore.recordState(nodes.value, edges.value, 'initial_state')
   }
-
+  const workflowInfo = ref<WorkflowEntity>({ ...defaultWorkflowInfo })
+  const viewportInfo = ref<WorkflowViewportInfo>({ ...defaultViewportInfo })
+  const setWorkflowInfo = (info?: Partial<WorkflowEntity> | null) => {
+    workflowInfo.value = {
+      ...defaultWorkflowInfo,
+      ...(info ?? {}),
+    }
+    // 更新画布的节点、边以及视图信息
+    if (workflowInfo.value.workflowJsonData) {
+      const json = workflowInfo.value.workflowJsonData
+      nodes.value = json.ui_metadata.nodes || []
+      edges.value = json.edges || []
+      setViewportInfo(json.ui_metadata.viewport)
+    }
+  }
+  const setViewportInfo = (viewport?: Partial<WorkflowViewportInfo> | null) => {
+    viewportInfo.value = {
+      ...defaultViewportInfo,
+      ...(viewport ?? {}),
+    }
+  }
   // 节点 默认存在一个起始节点，一个结束节点
   const nodes = ref<Node[]>([
     {
-      id: '$inputs',
+      id: 'inputs',
       type: 'inputs',
+      name: 'inputs',
       position: { x: 100, y: 300 },
-      data: { nodeTag: 'inputs', config: [] },
+      data: [],
     },
     {
-      id: '$outputs',
+      id: 'outputs',
       type: 'outputs',
+      name: 'outputs',
       position: { x: 500, y: 300 },
-      data: { nodeTag: 'outputs', config: [] },
+      data: [],
     },
   ])
   // 边
   const edges = ref<Edge[]>([])
   const selectedNode = ref<Node | null>(null)
-  const currentHandleInfo = ref<{
-    nodeId: string
-    position: { x: number; y: number }
-  } | null>(null)
+  const currentHandleInfo = ref<{ nodeId: string; position: { x: number; y: number } } | null>(null)
+
+  const workflowHealthStatus = ref<WorkflowHealthStatus>('checking')
+  const workflowHealthWarnings = ref<string[]>([])
+  const workflowHealthErrors = ref<string[]>([])
+  const workflowHealthSuggestions = ref<string[]>([])
+  const workflowHealthLastCheckedAt = ref('')
+  const workflowHealthHasChangesSinceLastCheck = ref(false)
+
+  const workflowHealthNodeCount = computed(() => nodes.value.length)
+  const workflowHealthEdgeCount = computed(() => edges.value.length)
+  const workflowHealthInputNodeCount = computed(
+    () => nodes.value.filter((item) => item.type === 'inputs').length,
+  )
+  const workflowHealthOutputNodeCount = computed(
+    () => nodes.value.filter((item) => item.type === 'outputs').length,
+  )
+
+  const workflowHealthSummaryTitle = computed(() => {
+    if (workflowHealthStatus.value === 'healthy') return '检查通过'
+    if (workflowHealthStatus.value === 'warning') return '存在可优化项'
+    if (workflowHealthStatus.value === 'error') return '存在阻断错误'
+    return '检查中'
+  })
+
+  const workflowHealthSummaryDesc = computed(() => {
+    if (workflowHealthStatus.value === 'healthy') return '当前工作流结构完整，可继续调试或保存。'
+    if (workflowHealthStatus.value === 'warning') {
+      return `共发现 ${workflowHealthWarnings.value.length} 个警告，请按建议优化。`
+    }
+    if (workflowHealthStatus.value === 'error') {
+      return `共发现 ${workflowHealthErrors.value.length} 个错误，修复后才能稳定运行。`
+    }
+    return '正在执行健康检查'
+  })
+
+  const formatNodeName = (node: Node, index: number) => {
+    const maybeName = (node as any).name || (node.data as any)?.name || (node as any).label
+    return String(maybeName || node.id || `节点${index + 1}`)
+  }
+
+  const addUniqueIssue = (target: string[], message: string) => {
+    if (!target.includes(message)) {
+      target.push(message)
+    }
+  }
+
+  const addSuggestion = (message: string) => {
+    if (!workflowHealthSuggestions.value.includes(message)) {
+      workflowHealthSuggestions.value.push(message)
+    }
+  }
+
+  const buildWorkflowHealth = () => {
+    workflowHealthWarnings.value = []
+    workflowHealthErrors.value = []
+    workflowHealthSuggestions.value = []
+
+    const currentNodes = nodes.value || []
+    const currentEdges = edges.value || []
+
+    const inputNodeCount = currentNodes.filter((item) => item.type === 'inputs').length
+    const outputNodeCount = currentNodes.filter((item) => item.type === 'outputs').length
+
+    if (currentNodes.length === 0) {
+      addUniqueIssue(workflowHealthErrors.value, '工作流中没有任何节点。')
+      addSuggestion('先添加输入节点、处理节点和输出节点，再进行连线。')
+    }
+
+    if (inputNodeCount === 0) {
+      addUniqueIssue(workflowHealthErrors.value, '缺少输入节点（inputs）。')
+      addSuggestion('至少保留一个输入节点作为流程起点。')
+    }
+
+    if (outputNodeCount === 0) {
+      addUniqueIssue(workflowHealthErrors.value, '缺少输出节点（outputs）。')
+      addSuggestion('至少保留一个输出节点作为流程终点。')
+    }
+
+    if (inputNodeCount > 1) {
+      addUniqueIssue(
+        workflowHealthWarnings.value,
+        `输入节点数量为 ${inputNodeCount}，请确认是否符合预期。`,
+      )
+    }
+
+    if (outputNodeCount > 1) {
+      addUniqueIssue(
+        workflowHealthWarnings.value,
+        `输出节点数量为 ${outputNodeCount}，请确认是否符合预期。`,
+      )
+    }
+
+    const nodeIdCount = new Map<string, number>()
+    const nodeMap = new Map<string, Node>()
+
+    currentNodes.forEach((node, index) => {
+      const nodeId = String(node.id ?? '')
+      const nodeName = formatNodeName(node, index)
+
+      if (!nodeId) {
+        addUniqueIssue(workflowHealthErrors.value, `节点“${nodeName}”缺少 id。`)
+        return
+      }
+
+      nodeIdCount.set(nodeId, (nodeIdCount.get(nodeId) ?? 0) + 1)
+      nodeMap.set(nodeId, node)
+
+      const isInput = node.type === 'inputs'
+      const isOutput = node.type === 'outputs'
+
+      if (!node.type) {
+        addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”未设置 type。`)
+      }
+
+      if (!isInput && !isOutput) {
+        const data = (node.data ?? {}) as Record<string, unknown>
+        const isDataEmpty =
+          data == null ||
+          (Array.isArray(data) && data.length === 0) ||
+          (!Array.isArray(data) && Object.keys(data).length === 0)
+
+        if (isDataEmpty) {
+          addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”尚未配置参数。`)
+        }
+      }
+    })
+
+    nodeIdCount.forEach((count, nodeId) => {
+      if (count > 1) {
+        addUniqueIssue(workflowHealthErrors.value, `节点 ID 重复：${nodeId}（重复 ${count} 次）。`)
+        addSuggestion('确保每个节点 ID 唯一，避免运行时覆盖。')
+      }
+    })
+
+    const incomingCount = new Map<string, number>()
+    const outgoingCount = new Map<string, number>()
+    nodeMap.forEach((_node, nodeId) => {
+      incomingCount.set(nodeId, 0)
+      outgoingCount.set(nodeId, 0)
+    })
+
+    const edgeIdCount = new Map<string, number>()
+    const edgePairCount = new Map<string, number>()
+    const validEdges: Array<{ id: string; source: string; target: string }> = []
+
+    currentEdges.forEach((edge, index) => {
+      const edgeId = String(edge.id ?? `edge_${index}`)
+      const source = String(edge.source ?? '')
+      const target = String(edge.target ?? '')
+
+      edgeIdCount.set(edgeId, (edgeIdCount.get(edgeId) ?? 0) + 1)
+
+      if (!source || !target) {
+        addUniqueIssue(workflowHealthErrors.value, `连线“${edgeId}”缺少 source 或 target。`)
+        return
+      }
+
+      if (!nodeMap.has(source) || !nodeMap.has(target)) {
+        addUniqueIssue(
+          workflowHealthErrors.value,
+          `连线“${edgeId}”指向不存在的节点（${source} -> ${target}）。`,
+        )
+        addSuggestion('删除悬空连线，或补齐缺失节点。')
+        return
+      }
+
+      if (source === target) {
+        addUniqueIssue(workflowHealthWarnings.value, `连线“${edgeId}”形成自环（${source} -> ${target}）。`)
+        addSuggestion('避免节点自环，通常会导致流程循环执行。')
+      }
+
+      const pairKey = `${source}-->${target}`
+      edgePairCount.set(pairKey, (edgePairCount.get(pairKey) ?? 0) + 1)
+
+      incomingCount.set(target, (incomingCount.get(target) ?? 0) + 1)
+      outgoingCount.set(source, (outgoingCount.get(source) ?? 0) + 1)
+      validEdges.push({ id: edgeId, source, target })
+    })
+
+    edgeIdCount.forEach((count, edgeId) => {
+      if (count > 1) {
+        addUniqueIssue(workflowHealthWarnings.value, `连线 ID 重复：${edgeId}（重复 ${count} 次）。`)
+      }
+    })
+
+    edgePairCount.forEach((count, pair) => {
+      if (count > 1) {
+        addUniqueIssue(workflowHealthWarnings.value, `节点间存在重复连线：${pair}（${count} 条）。`)
+      }
+    })
+
+    currentNodes.forEach((node, index) => {
+      const nodeId = String(node.id ?? '')
+      if (!nodeId || !nodeMap.has(nodeId)) return
+
+      const nodeName = formatNodeName(node, index)
+      const isInput = node.type === 'inputs'
+      const isOutput = node.type === 'outputs'
+      const incoming = incomingCount.get(nodeId) ?? 0
+      const outgoing = outgoingCount.get(nodeId) ?? 0
+
+      if (!isInput && incoming === 0) {
+        addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”没有输入连线。`)
+      }
+
+      if (!isOutput && outgoing === 0) {
+        addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”没有输出连线。`)
+      }
+
+      if (incoming === 0 && outgoing === 0) {
+        addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”为孤立节点。`)
+        addSuggestion('移除孤立节点，或将其接入主流程。')
+      }
+    })
+
+    const inputIds = currentNodes
+      .filter((node) => node.type === 'inputs')
+      .map((node) => String(node.id))
+    const outputIds = currentNodes
+      .filter((node) => node.type === 'outputs')
+      .map((node) => String(node.id))
+
+    if (inputIds.length > 0) {
+      const adjacency = new Map<string, string[]>()
+      nodeMap.forEach((_node, id) => adjacency.set(id, []))
+      validEdges.forEach(({ source, target }) => {
+        adjacency.get(source)?.push(target)
+      })
+
+      const visited = new Set<string>()
+      const queue = [...inputIds]
+
+      while (queue.length > 0) {
+        const current = queue.shift()!
+        if (visited.has(current)) continue
+        visited.add(current)
+        const nextList = adjacency.get(current) ?? []
+        nextList.forEach((next) => {
+          if (!visited.has(next)) queue.push(next)
+        })
+      }
+
+      nodeMap.forEach((node, nodeId) => {
+        if (visited.has(nodeId)) return
+        const nodeName = formatNodeName(node, 0)
+        addUniqueIssue(workflowHealthWarnings.value, `节点“${nodeName}”从输入节点不可达。`)
+        addSuggestion('检查连线方向，保证流程从输入可以到达每个关键节点。')
+      })
+
+      outputIds.forEach((outputId) => {
+        if (!visited.has(outputId)) {
+          addUniqueIssue(workflowHealthErrors.value, `输出节点“${outputId}”从输入不可达。`)
+          addSuggestion('确保至少存在一条从输入到输出的完整路径。')
+        }
+      })
+    }
+
+    if (validEdges.length > 0 && nodeMap.size > 0) {
+      const inDegree = new Map<string, number>()
+      const nextMap = new Map<string, string[]>()
+
+      nodeMap.forEach((_node, id) => {
+        inDegree.set(id, 0)
+        nextMap.set(id, [])
+      })
+
+      validEdges.forEach(({ source, target }) => {
+        inDegree.set(target, (inDegree.get(target) ?? 0) + 1)
+        nextMap.get(source)?.push(target)
+      })
+
+      const queue: string[] = []
+      inDegree.forEach((degree, id) => {
+        if (degree === 0) queue.push(id)
+      })
+
+      let processed = 0
+      while (queue.length > 0) {
+        const current = queue.shift()!
+        processed += 1
+        const children = nextMap.get(current) ?? []
+        children.forEach((child) => {
+          const nextDegree = (inDegree.get(child) ?? 0) - 1
+          inDegree.set(child, nextDegree)
+          if (nextDegree === 0) queue.push(child)
+        })
+      }
+
+      if (processed < nodeMap.size) {
+        addUniqueIssue(workflowHealthErrors.value, '检测到流程存在环路（循环依赖）。')
+        addSuggestion('移除回环连线，保持流程有向无环。')
+      }
+    }
+
+    const overlapPairs: string[] = []
+    const overlapThreshold = 24
+    for (let i = 0; i < currentNodes.length; i += 1) {
+      for (let j = i + 1; j < currentNodes.length; j += 1) {
+        const a = currentNodes[i]
+        const b = currentNodes[j]
+        if (!a || !b) continue
+
+        const ax = Number(a.position?.x)
+        const ay = Number(a.position?.y)
+        const bx = Number(b.position?.x)
+        const by = Number(b.position?.y)
+
+        if (![ax, ay, bx, by].every((value) => Number.isFinite(value))) continue
+
+        if (Math.abs(ax - bx) <= overlapThreshold && Math.abs(ay - by) <= overlapThreshold) {
+          overlapPairs.push(`${formatNodeName(a, i)} / ${formatNodeName(b, j)}`)
+        }
+      }
+    }
+
+    if (overlapPairs.length > 0) {
+      addUniqueIssue(
+        workflowHealthWarnings.value,
+        `检测到 ${overlapPairs.length} 组节点位置重叠，可能影响连线与编辑体验。`,
+      )
+      addSuggestion('适当拉开节点位置，或使用自动布局后再微调。')
+    }
+
+    if (workflowHealthErrors.value.length > 0) {
+      workflowHealthStatus.value = 'error'
+    } else if (workflowHealthWarnings.value.length > 0) {
+      workflowHealthStatus.value = 'warning'
+    } else {
+      workflowHealthStatus.value = 'healthy'
+    }
+
+    const now = new Date()
+    workflowHealthLastCheckedAt.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(
+      now.getMinutes(),
+    ).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+
+    workflowHealthHasChangesSinceLastCheck.value = false
+  }
+
+  const performWorkflowHealthCheck = () => {
+    workflowHealthStatus.value = 'checking'
+    window.setTimeout(() => {
+      buildWorkflowHealth()
+    }, 120)
+  }
+
+  watch(
+    [nodes, edges],
+    () => {
+      if (workflowHealthStatus.value !== 'checking') {
+        workflowHealthHasChangesSinceLastCheck.value = true
+      }
+    },
+    { deep: true },
+  )
+
   // 添加节点
   const addNode = (node: Node) => {
     nodes.value.push(node)
@@ -51,13 +457,34 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   // 更新节点数据
-  const updateNode = (nodeId: string, config: any) => {
-    const node = nodes.value.find((n) => n.id === nodeId)
-    if (node) {
-      node.data.config = config
-      // 记录操作后的状态
-      historyStore.recordState(nodes.value, edges.value, 'update_node')
+  const updateNode = (nodeId: string, data: any) => {
+    const nodeIndex = nodes.value.findIndex((n) => n.id === nodeId)
+    if (nodeIndex === -1) return
+
+    const nextData = JSON.parse(JSON.stringify(data))
+    const currentNode = nodes.value[nodeIndex] as Node
+    console.log('更新节点数据前:', currentNode)
+    const currentData = JSON.parse(JSON.stringify(currentNode.data))
+
+    // 数据没有变化时不记录历史，避免无效历史堆积
+    if (JSON.stringify(currentData) === JSON.stringify(nextData)) return
+
+    const updatedNode = {
+      ...currentNode,
+      data: nextData,
     }
+    console.log('更新节点数据后:', updatedNode)
+    // 替换整个数组引用，确保依赖 nodes 的组件（如 VueFlow）能稳定感知更新
+    nodes.value = nodes.value.map((node, index) =>
+      index === nodeIndex ? (updatedNode as Node) : node,
+    )
+    // 保证属性面板引用的是最新节点对象
+    if (selectedNode.value?.id === nodeId) {
+      selectedNode.value = nodes.value.find((n) => n.id === nodeId) || null
+    }
+
+    // 记录操作后的状态
+    historyStore.recordState(nodes.value, edges.value, 'update_node')
   }
 
   // 添加边
@@ -140,8 +567,63 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   const getEdges = computed(() => edges.value)
   const getNodes = computed(() => nodes.value)
+  const getViewportInfo = computed(() => viewportInfo.value)
+
+  const getSaveWorkflowData = (): any => {
+    console.log('nodes.value', nodes.value)
+
+    return {
+      name: workflowInfo.value.workflowName,
+      inputs: nodes.value
+        .filter((item) => item.type === 'inputs')
+        .map((item) => {
+          const nodeData = item.data as any
+          return {
+            id: item.id,
+            type: 'WorkflowImage',
+            ui_position: item.position,
+            name: nodeData?.[0]?.name || (item as any).name || '',
+          }
+        }),
+      steps: nodes.value
+        .filter((item) => item.type !== 'inputs' && item.type !== 'outputs')
+        .map((item) => ({
+          id: item.id,
+          type: item.type,
+          ui_position: item.position,
+          name: item.name,
+          ...(item.data as any),
+        })),
+      outputs: nodes.value
+        .filter((item) => item.type === 'outputs')
+        .map((item) => ({
+          id: item.id,
+          type: 'output@v1',
+          ui_position: item.position,
+          name: item.name,
+          outputs: item.data,
+        })),
+      edges: edges.value.map((item) => ({
+        id: item.id,
+        source: item.source,
+        target: item.target,
+      })),
+      ui_metadata: {
+        viewport: viewportInfo.value,
+        nodes: nodes.value.map((item) => ({
+          id: item.id,
+          type: item.type,
+          name: item.name,
+          position: item.position,
+          data: item.data,
+        })),
+      },
+    }
+  }
 
   return {
+    workflowInfo,
+    viewportInfo,
     nodes,
     edges,
     selectedNode,
@@ -150,7 +632,20 @@ export const useWorkflowStore = defineStore('workflow', () => {
     historyStore, // 导出historyStore以便外部访问
     getEdges,
     getNodes,
+    getViewportInfo,
     currentHandleInfo,
+    workflowHealthStatus,
+    workflowHealthWarnings,
+    workflowHealthErrors,
+    workflowHealthSuggestions,
+    workflowHealthLastCheckedAt,
+    workflowHealthHasChangesSinceLastCheck,
+    workflowHealthNodeCount,
+    workflowHealthEdgeCount,
+    workflowHealthInputNodeCount,
+    workflowHealthOutputNodeCount,
+    workflowHealthSummaryTitle,
+    workflowHealthSummaryDesc,
     addNode,
     removeNode,
     updateNode,
@@ -160,7 +655,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
     undo,
     redo,
     initializeHistory,
+    setWorkflowInfo,
+    setViewportInfo,
     setCurrentHandleInfo,
     clearCurrentHandleInfo,
+    performWorkflowHealthCheck,
+    getSaveWorkflowData,
   }
 })
