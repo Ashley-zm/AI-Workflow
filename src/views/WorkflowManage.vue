@@ -98,7 +98,7 @@
       <section
         v-loading="workflowLoading"
         v-if="viewMode === 'card'"
-        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        class="grid gap-3 sm:grid-cols-3 xl:grid-cols-4"
       >
         <article
           v-for="item in workflowItems"
@@ -243,21 +243,18 @@
           <el-table-column label="操作" width="340">
             <template #default="{ row }">
               <div class="list-action-bar">
-                <el-button
-                  type="primary"
-                  link
-                  :icon="Edit"
-                  title="编辑"
-                  @click="onCardCommand('edit', row)"
-                >
-                </el-button>
-                <el-button
-                  type="primary"
-                  link
-                  @click="onCardCommand('copy', row)"
-                  :icon="Copy"
-                  title="复制"
-                ></el-button>
+                <el-tooltip content="编辑工作流" placement="top">
+                  <el-button type="primary" link :icon="Edit" @click="onCardCommand('edit', row)">
+                  </el-button>
+                </el-tooltip>
+                <el-tooltip content="复制工作流" placement="top">
+                  <el-button
+                    type="primary"
+                    link
+                    @click="onCardCommand('copy', row)"
+                    :icon="Copy"
+                  ></el-button>
+                </el-tooltip>
 
                 <el-popover
                   placement="right-start"
@@ -291,18 +288,34 @@
                   <div v-else class="move-group-empty">暂无分组</div>
                 </el-popover>
 
-                <el-button
-                  type="primary"
-                  link
-                  :icon="Trash2"
-                  title="删除"
-                  @click="onCardCommand('delete', row)"
-                >
-                </el-button>
+                <el-tooltip content="删除工作流" placement="top">
+                  <el-button
+                    type="primary"
+                    link
+                    :icon="Trash2"
+                    @click="onCardCommand('delete', row)"
+                  >
+                  </el-button>
+                </el-tooltip>
               </div>
             </template>
           </el-table-column>
         </el-table>
+
+        <div class="flex justify-end border-t border-slate-100 px-4 py-3">
+          <el-config-provider :locale="zhCn">
+            <el-pagination
+              :current-page="pageNum"
+              :page-size="pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="total"
+              layout="total, sizes, prev, pager, next, jumper"
+              background
+              @size-change="handleListPageSizeChange"
+              @current-change="handleListPageChange"
+            />
+          </el-config-provider>
+        </div>
       </section>
     </div>
   </div>
@@ -323,6 +336,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {
   ChevronRight,
   EllipsisVertical,
@@ -366,6 +380,7 @@ const editingWorkflowId = ref('')
 
 const pageNum = ref(1)
 const pageSize = ref(20)
+const total = ref(0)
 
 const workflowLoading = ref(false)
 const groupLoading = ref(false)
@@ -416,6 +431,7 @@ const fetchWorkflowList = async () => {
       ElMessage.error(response.msg || '加载工作流失败')
       return
     }
+    total.value = response.total || 0
 
     workflows.value = response.rows || []
   } catch (error) {
@@ -463,10 +479,6 @@ const closeActionMenu = () => {
 
 const onCardActionMenuVisibleChange = (id: string, visible: boolean) => {
   handleActionMenuVisibleChange(visible, `card-${id}`)
-}
-
-const onListActionMenuVisibleChange = (id: string, visible: boolean) => {
-  handleActionMenuVisibleChange(visible, `list-${id}`)
 }
 
 const onListMoveGroupVisibleChange = (visible: boolean) => {
@@ -623,6 +635,19 @@ let queryTimer: ReturnType<typeof setTimeout> | undefined
 
 const handleSearch = () => {
   if (queryTimer) clearTimeout(queryTimer)
+  pageNum.value = 1
+  fetchWorkflowList()
+}
+
+const handleListPageChange = (nextPage: number) => {
+  if (pageNum.value === nextPage) return
+  pageNum.value = nextPage
+  fetchWorkflowList()
+}
+
+const handleListPageSizeChange = (nextPageSize: number) => {
+  if (pageSize.value === nextPageSize) return
+  pageSize.value = nextPageSize
   pageNum.value = 1
   fetchWorkflowList()
 }
