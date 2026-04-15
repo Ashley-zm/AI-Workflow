@@ -373,7 +373,7 @@ const defaultData = (): Property => ({
   predictions: undefined,
   box_color: '#FF0000',
   box_thickness: 2,
-  use_model_colors: false, //是否使用模型颜色
+  use_model_colors: true, //是否使用模型颜色
   show_labels: true, //是否显示标签
   show_scores: true, //是否显示分数
 })

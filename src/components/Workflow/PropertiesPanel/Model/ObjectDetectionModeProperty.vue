@@ -148,13 +148,13 @@
 
         <div class="flex items-center gap-4">
           <label class="block text-xs font-medium text-slate-700">
-            设备类型 <span class="text-red-500">*</span>
+            推理设备 <span class="text-red-500">*</span>
           </label>
           <el-select
             v-model="data.device"
             size="default"
             class="flex-1"
-            placeholder="请选择设备类型"
+            placeholder="请选择推理设备"
             @change="updateConfig"
           >
             <el-option
@@ -477,6 +477,7 @@ const copyJson = async () => {
 
 const initializeData = () => {
   data.value = props.modelValue || defaultData()
+  console.log('initializeData', data.value)
 }
 const type: Record<string, string> = {
   'detection_model@v1': 'detection',
@@ -545,6 +546,7 @@ watch(
 )
 
 onMounted(async () => {
+  console.log('onMounted', props.nodeObj, props.modelValue)
   await getGpu()
   await getModelList()
 })

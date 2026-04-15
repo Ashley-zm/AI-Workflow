@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [vue(), tailwindcss()],
-    base: '/subapp/',
+    base: '/workflow/',
     // plugins: [vue(), tailwindcss(), vueDevTools()],
     resolve: {
       alias: {

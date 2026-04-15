@@ -311,15 +311,11 @@ const handleDeployService = async () => {
 
     if (deployedResponse.data) {
       try {
-        await ElMessageBox.confirm(
-          '发布后，将覆盖该工作流已发布的服务，确认发布吗？',
-          '提示',
-          {
-            confirmButtonText: '确认发布',
-            cancelButtonText: '取消',
-            type: 'warning',
-          },
-        )
+        await ElMessageBox.confirm('发布后，将覆盖该工作流已发布的服务，确认发布吗？', '提示', {
+          confirmButtonText: '确认发布',
+          cancelButtonText: '取消',
+          type: 'warning',
+        })
       } catch {
         return
       }

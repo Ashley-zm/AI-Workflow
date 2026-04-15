@@ -453,14 +453,17 @@
                 <div class="grid grid-cols-2 gap-2">
                   <div
                     v-for="(img, imgIndex) in output.images"
-                    :key="imgIndex"
+                    :key="`${img.fieldName}-${imgIndex}`"
                     class="rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
                   >
                     <img
-                      :src="img"
+                      :src="img.url"
                       class="w-full h-24 object-contain cursor-pointer hover:opacity-80 transition-opacity"
-                      @click="previewImage(img)"
+                      @click="previewImage(img.url)"
                     />
+                    <div class="border-t border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-500">
+                      {{ img.fieldName }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -596,7 +599,10 @@ interface DebugOutput {
   status: 'success' | 'error' | 'warning'
   duration: number
   data?: any
-  images?: string[]
+  images?: Array<{
+    fieldName: string
+    url: string
+  }>
   error?: string
 }
 
@@ -631,6 +637,7 @@ const showImagePreview = ref(false)
 const previewImageUrl = ref('')
 
 const inputNode = computed(() => props.nodes.find((n) => n.type === 'inputs') || null)
+const outputNode = computed(() => props.nodes.find((n) => n.type === 'outputs') || null)
 const inputProperties = computed<any[]>(() => {
   const data: any = inputNode.value?.data
   if (Array.isArray(data)) {
@@ -643,6 +650,25 @@ const inputProperties = computed<any[]>(() => {
     return data.config
   }
   return []
+})
+const outputProperties = computed<any[]>(() => {
+  const data: any = outputNode.value?.data
+  if (Array.isArray(data)) {
+    return data
+  }
+  if (Array.isArray(data?.properties)) {
+    return data.properties
+  }
+  if (Array.isArray(data?.config)) {
+    return data.config
+  }
+  return []
+})
+const imageOutputFieldNames = computed<string[]>(() => {
+  return outputProperties.value
+    .filter((field: any) => field?.type === 'ImageField')
+    .map((field: any) => String(field?.name ?? '').trim())
+    .filter((name: string) => name.length > 0)
 })
 
 const inputValues = ref<Record<string, any>>({})
@@ -944,6 +970,69 @@ const previewImage = (url: string) => {
   showImagePreview.value = true
 }
 
+const normalizeImageValue = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return null
+    if (
+      raw.startsWith('data:image/') ||
+      raw.startsWith('http://') ||
+      raw.startsWith('https://') ||
+      raw.startsWith('blob:') ||
+      raw.startsWith('/')
+    ) {
+      return raw
+    }
+    return null
+  }
+
+  if (!value || typeof value !== 'object') return null
+
+  const recordValue = value as Record<string, unknown>
+  const url = recordValue.url
+  if (typeof url === 'string' && url.trim()) {
+    return url.trim()
+  }
+
+  const prefix = recordValue.prefix
+  const base64 = recordValue.value
+  if (typeof prefix === 'string' && typeof base64 === 'string' && prefix && base64) {
+    return `${prefix}${base64}`
+  }
+
+  return null
+}
+
+const extractDebugImages = (executeData: any): Array<{ fieldName: string; url: string }> => {
+  const results = executeData?.executeResult?.results
+  if (!results || typeof results !== 'object') return []
+
+  const images = imageOutputFieldNames.value
+    .map((fieldName) => {
+      const imageValue = normalizeImageValue((results as Record<string, unknown>)[fieldName])
+      if (!imageValue) return null
+      return {
+        fieldName,
+        url: imageValue,
+      }
+    })
+    .filter((item): item is { fieldName: string; url: string } => Boolean(item))
+
+  if (images.length > 0) return images
+
+  const legacyImageValue = normalizeImageValue((results as Record<string, unknown>).annotated_image)
+  if (legacyImageValue) {
+    return [
+      {
+        fieldName: 'annotated_image',
+        url: legacyImageValue,
+      },
+    ]
+  }
+
+  return []
+}
+
 const hasSubmittedInputs = computed(() => {
   const submittedInputs = getSubmittedDebugInputs(inputValues.value)
   return Object.keys(submittedInputs).length > 0
@@ -1109,8 +1198,6 @@ const handleStartDebug = async () => {
         inputs: submittedInputs,
       },
     })
-    console.log('executeResponse顶顶顶顶', executeResponse)
-
     if (executeResponse.code !== 200 || !executeResponse.data) {
       ElMessage.error(executeResponse.msg || '调试接口调用失败')
       addExecutionLog('error', executeResponse.msg || '调试接口调用失败')
@@ -1136,9 +1223,7 @@ const handleStartDebug = async () => {
         status: 'success',
         duration: Date.now() - startTime,
         data: executeResponse.data,
-        images: executeResponse.data.executeResult?.results.annotated_image
-          ? [String(executeResponse.data.executeResult?.results.annotated_image)]
-          : undefined,
+        images: extractDebugImages(executeResponse.data),
       },
     ]
     addExecutionLog('info', '调试接口调用成功')

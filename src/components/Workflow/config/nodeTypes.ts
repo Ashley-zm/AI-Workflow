@@ -21,21 +21,21 @@ const allNodeTypes = {
   'bounding_box_visualization@v1': markRaw(BoundingBoxVisualizationNode),
   polygon_visualization: markRaw(PolygonVisualizationNode),
   label_visualization: markRaw(LabelVisualizationNode),
-  if_else: markRaw(IfElseNode),
-  switch_case: markRaw(IfElseNode),
+  'conditional_branch@v1': markRaw(IfElseNode),
 } as NodeTypesObject
 
 export { allNodeTypes, nodeTypesList, getNodeType }
 
 export const getNodeEdgeType = () => {
   return {
+    type: 'button',
     animated: true,
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      color: '#5e5e5eff',
+      color: '#8f8f8f',
     },
     style: {
-      stroke: '#5e5e5eff',
+      stroke: '#8f8f8f',
     },
   }
 }

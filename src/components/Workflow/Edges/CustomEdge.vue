@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { BaseEdge, getBezierPath, Position, EdgeLabelRenderer } from '@vue-flow/core'
 import { computed, ref } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, ChevronRight } from 'lucide-vue-next'
 
 const props = defineProps({
   id: {
@@ -43,6 +43,16 @@ const props = defineProps({
   style: {
     type: Object,
     required: false,
+    default: () => ({
+      animated: true,
+      markerEnd: {
+        type: ChevronRight,
+        color: '#5e5e5eff',
+      },
+      style: {
+        stroke: '#5e5e5eff',
+      },
+    }),
   },
 })
 
@@ -55,7 +65,7 @@ const path = computed(() =>
 )
 
 // 控制按钮显示状态
-const isHovered = ref(false)
+const isHovered = ref(true)
 
 //给父组件传递事件
 const emit = defineEmits({

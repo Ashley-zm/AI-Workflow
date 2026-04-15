@@ -23,9 +23,9 @@
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
               {{ nodeType?.name || 'Visualization' }}
             </div>
-            <div class="text-[11px] text-gray-700 tracking-[1px]">
+            <p class="text-xs text-gray-500 tracking-[1px]">
               {{ nodeType?.description || 'Visualization 节点' }}
-            </div>
+            </p>
           </div>
         </div>
         <el-tooltip
@@ -106,7 +106,6 @@
         type="source"
         :position="Position.Right"
         :node-id="props.id"
-        :color="nodeColor"
         :show-tooltip="true"
       />
     </div>

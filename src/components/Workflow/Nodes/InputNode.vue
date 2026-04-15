@@ -16,10 +16,10 @@
           />
         </div>
         <div class="flex flex-col">
-          <span :class="`text-sm font-bold text-${nodeColor}-700`">
+          <span class="text-sm font-bold text-slate-700">
             {{ nodeType?.name || 'Input' }}
           </span>
-          <p :class="`text-xs text-${nodeColor}-600/80`">
+          <p class="text-xs text-gray-500 tracking-[1px]">
             {{ nodeType?.description || 'Input 节点' }}
           </p>
         </div>
@@ -111,7 +111,6 @@
       type="source"
       :position="Position.Right"
       :node-id="props.id"
-      color="emerald"
       :show-tooltip="true"
     />
   </div>

@@ -81,7 +81,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 边
   const edges = ref<Edge[]>([])
   const selectedNode = ref<Node | null>(null)
-  const currentHandleInfo = ref<{ nodeId: string; position: { x: number; y: number } } | null>(null)
+  const currentHandleInfo = ref<{
+    nodeId: string
+    sourceHandle?: string
+    position: { x: number; y: number }
+  } | null>(null)
 
   const workflowHealthStatus = ref<WorkflowHealthStatus>('checking')
   const workflowHealthWarnings = ref<string[]>([])
@@ -249,7 +253,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
       }
 
       if (source === target) {
-        addUniqueIssue(workflowHealthWarnings.value, `连线“${edgeId}”形成自环（${source} -> ${target}）。`)
+        addUniqueIssue(
+          workflowHealthWarnings.value,
+          `连线“${edgeId}”形成自环（${source} -> ${target}）。`,
+        )
         addSuggestion('避免节点自环，通常会导致流程循环执行。')
       }
 
@@ -263,7 +270,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     edgeIdCount.forEach((count, edgeId) => {
       if (count > 1) {
-        addUniqueIssue(workflowHealthWarnings.value, `连线 ID 重复：${edgeId}（重复 ${count} 次）。`)
+        addUniqueIssue(
+          workflowHealthWarnings.value,
+          `连线 ID 重复：${edgeId}（重复 ${count} 次）。`,
+        )
       }
     })
 
@@ -444,6 +454,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 添加节点
   const addNode = (node: Node) => {
     nodes.value.push(node)
+    setSelectedNode(node.id)
+
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'add_node')
   }
@@ -489,7 +501,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 添加边
   const addEdge = (edge: Edge) => {
-    edges.value.push(edge)
+    edges.value.push({
+      ...edge,
+      type: edge.type || 'button',
+    })
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'add_edge')
   }
@@ -505,9 +520,10 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const setSelectedNode = (nodeId: string | null) => {
     selectedNode.value = nodes.value.find((n) => n.id === nodeId) || null
   }
-  const setCurrentHandleInfo = (nodeId: string, event: MouseEvent) => {
+  const setCurrentHandleInfo = (nodeId: string, event: MouseEvent, sourceHandle?: string) => {
     currentHandleInfo.value = {
       nodeId,
+      sourceHandle,
       position: { x: event.clientX, y: event.clientY },
     }
   }
@@ -607,6 +623,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
         id: item.id,
         source: item.source,
         target: item.target,
+        type: item.type || 'button',
+        sourceHandle: item.sourceHandle,
       })),
       ui_metadata: {
         viewport: viewportInfo.value,

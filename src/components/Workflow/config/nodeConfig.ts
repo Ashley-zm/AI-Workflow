@@ -12,8 +12,7 @@ export const getNodeTypeIcon = (type: string | undefined) => {
     processing: LucideIconsVue.Hash,
     visualization: LucideIconsVue.Type,
     conditional_branch: LucideIconsVue.GitBranch,
-    if_else: LucideIconsVue.Filter,
-    switch_case: LucideIconsVue.Route,
+    'conditional_branch@v1': LucideIconsVue.Filter,
   }
   return iconMap[type] || LucideIconsVue.Database
 }
@@ -27,8 +26,7 @@ export const getNodeTypeLabel = (type: string | undefined) => {
     processing: '处理',
     visualization: '可视化',
     conditional_branch: '条件分支',
-    if_else: 'If/Else',
-    switch_case: 'Switch/Case',
+    'conditional_branch@v1': 'If/Else',
   }
   return typeMap[type] || type
 }
@@ -79,5 +77,18 @@ export const getHoverTextColor = (color: string) => {
   }
   return colorMap[color] || 'group-hover:text-blue-500'
 }
-
-// emerald 绿色
+export const getIconStyle = (color: string) => {
+  const colorMap: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-500',
+    green: 'bg-green-50 text-green-500',
+    purple: 'bg-purple-50 text-purple-500',
+    orange: 'bg-orange-50 text-orange-500',
+    red: 'bg-red-50 text-red-500',
+    indigo: 'bg-indigo-50 text-indigo-500',
+    emerald: 'bg-emerald-50 text-emerald-500',
+    teal: 'bg-teal-50 text-teal-500',
+    amber: 'bg-amber-50 text-amber-500',
+    yellow: 'bg-yellow-50 text-yellow-500',
+  }
+  return colorMap[color] || 'bg-blue-50 text-blue-500'
+}

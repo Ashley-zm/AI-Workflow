@@ -6,114 +6,52 @@
         <h3 class="text-sm font-semibold text-slate-800">条件配置</h3>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-        <template v-if="isSwitchCase">
+        <div class="space-y-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-2">
-              路由字段 <span class="text-red-500">*</span>
-            </label>
+            <label class="block text-xs font-medium text-slate-700 mb-2">比较字段</label>
+            <el-select
+              v-model="config.condition"
+              class="w-full"
+              placeholder="请选择比较字段"
+              @change="updateConfig"
+            >
+              <el-option
+                v-for="option in fieldOptions"
+                :key="option"
+                :label="option"
+                :value="option"
+              />
+            </el-select>
+            <p class="mt-1 text-[11px] text-slate-500">来源：$steps.图像分类模型节点name.passed</p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-2">操作符</label>
+            <el-select v-model="config.operator" class="w-full" @change="updateConfig">
+              <el-option label="==" value="==" />
+              <el-option label="!=" value="!=" />
+              <el-option label=">" value=">" />
+              <el-option label=">=" value=">=" />
+              <el-option label="<" value="<" />
+              <el-option label="<=" value="<=" />
+            </el-select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-2">期望值</label>
             <el-input
-              v-model="config[0].routeField"
+              v-model="config.expected_value"
               size="default"
-              placeholder="例如: result.label"
+              placeholder="0.8"
               @input="updateConfig"
             />
           </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-2">Case 列表</label>
-            <el-input
-              v-model="caseText"
-              type="textarea"
-              :rows="5"
-              placeholder="一行一个 case，格式: value => branchName"
-              @change="handleCaseTextChange"
-            />
-            <p class="mt-1 text-[11px] text-slate-500">示例: pass => passed_branch</p>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-2">默认分支标签</label>
-            <el-input
-              v-model="config[0].defaultLabel"
-              size="default"
-              placeholder="default"
-              @input="updateConfig"
-            />
-          </div>
-        </template>
+        </div>
 
-        <template v-else>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-2">条件模式</label>
-            <el-radio-group v-model="config[0].conditionMode" @change="updateConfig">
-              <el-radio-button label="expression">表达式</el-radio-button>
-              <el-radio-button label="compare">字段比较</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <div v-if="config[0].conditionMode === 'expression'">
-            <label class="block text-xs font-medium text-slate-700 mb-2">
-              条件表达式 <span class="text-red-500">*</span>
-            </label>
-            <el-input
-              v-model="config[0].expression"
-              size="default"
-              placeholder="例如: score >= 0.8 && label === 'cat'"
-              @input="updateConfig"
-            />
-          </div>
-
-          <div v-else class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-2">字段</label>
-              <el-input
-                v-model="config[0].field"
-                size="default"
-                placeholder="score"
-                @input="updateConfig"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-2">操作符</label>
-              <el-select v-model="config[0].operator" class="w-full" @change="updateConfig">
-                <el-option label="==" value="==" />
-                <el-option label="!=" value="!=" />
-                <el-option label=">" value=">" />
-                <el-option label=">=" value=">=" />
-                <el-option label="<" value="<" />
-                <el-option label="<=" value="<=" />
-              </el-select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-2">比较值</label>
-              <el-input
-                v-model="config[0].value"
-                size="default"
-                placeholder="0.8"
-                @input="updateConfig"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-2">True 分支标签</label>
-              <el-input
-                v-model="config[0].trueLabel"
-                size="default"
-                placeholder="true"
-                @input="updateConfig"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-2">False 分支标签</label>
-              <el-input
-                v-model="config[0].falseLabel"
-                size="default"
-                placeholder="false"
-                @input="updateConfig"
-              />
-            </div>
-          </div>
-        </template>
+        <div
+          v-if="fieldOptions.length === 0"
+          class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
+        >
+          暂无可选字段，请先将图像分类模型连接到该 If/Else 节点。
+        </div>
       </div>
     </div>
 
@@ -123,7 +61,10 @@
           <div class="h-4 w-0.5 rounded-full bg-slate-500"></div>
           <h3 class="text-sm font-semibold text-slate-800">JSON 预览</h3>
         </div>
-        <button class="text-xs text-blue-500 hover:text-blue-700 transition-colors" @click="copyJson">
+        <button
+          class="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+          @click="copyJson"
+        >
           复制 JSON
         </button>
       </div>
@@ -141,128 +82,53 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/stores/workflow'
 
-interface SwitchCaseItem {
-  value: string
-  label: string
-}
-
 const props = defineProps<{
-  modelValue: any[]
+  modelValue: any
   nodeId: string
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: any[]]
-  'update:nodeConfig': [value: any[]]
+  'update:modelValue': [value: Record<string, any>]
+  'update:nodeConfig': [value: Record<string, any>]
 }>()
 
 const store = useWorkflowStore()
 
-const getDefaultConfig = (type: string) => {
-  if (type === 'switch_case') {
-    return [
-      {
-        routeField: '',
-        cases: [] as SwitchCaseItem[],
-        defaultLabel: 'default',
-      },
-    ]
+const getDefaultConfig = () => {
+  return {
+    condition: '',
+    operator: '==',
+    expected_value: true,
   }
-
-  return [
-    {
-      conditionMode: 'expression',
-      expression: '',
-      field: '',
-      operator: '==',
-      value: '',
-      trueLabel: 'true',
-      falseLabel: 'false',
-    },
-  ]
 }
 
-const config = ref<any[]>(getDefaultConfig('if_else'))
-const caseText = ref('')
+const config = ref<Record<string, any>>(getDefaultConfig())
 
-const currentNodeType = computed(() => {
-  const node = store.nodes.find((item) => item.id === props.nodeId)
-  return node?.type || 'if_else'
-})
+const normalizeConfig = (value: unknown) => {
+  const defaultConfig = getDefaultConfig()
+  if (!value || typeof value !== 'object') return defaultConfig
 
-const isSwitchCase = computed(() => currentNodeType.value === 'switch_case')
+  const source = Array.isArray(value)
+    ? (value[0] as Record<string, any> | undefined)
+    : Array.isArray((value as any).config)
+      ? ((value as any).config[0] as Record<string, any> | undefined)
+      : (value as Record<string, any>)
 
-const parseCaseText = (text: string): SwitchCaseItem[] => {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      if (line.includes('=>')) {
-        const [rawValue = '', rawLabel = ''] = line.split('=>')
-        const value = rawValue.trim()
-        const label = rawLabel.trim() || value
-        return { value, label }
-      }
-      if (line.includes(':')) {
-        const [rawValue = '', rawLabel = ''] = line.split(':')
-        const value = rawValue.trim()
-        const label = rawLabel.trim() || value
-        return { value, label }
-      }
-      return { value: line, label: line }
-    })
-}
+  if (!source || typeof source !== 'object') return defaultConfig
 
-const buildCaseText = (cases: SwitchCaseItem[]) => {
-  return cases.map((item) => `${item.value} => ${item.label}`).join('\n')
-}
-
-const normalizeConfig = (value: any[] | undefined, type: string) => {
-  if (!Array.isArray(value) || value.length === 0) {
-    return getDefaultConfig(type)
+  return {
+    condition: source.condition || source.field || defaultConfig.condition,
+    operator: source.operator || defaultConfig.operator,
+    expected_value: source.expected_value ?? source.value ?? defaultConfig.expected_value,
   }
-
-  const first = value[0] || {}
-
-  if (type === 'switch_case') {
-    const cases = Array.isArray(first.cases)
-      ? first.cases
-      : typeof first.cases === 'string'
-        ? parseCaseText(first.cases)
-        : []
-
-    return [
-      {
-        routeField: first.routeField || '',
-        cases,
-        defaultLabel: first.defaultLabel || 'default',
-      },
-    ]
-  }
-
-  return [
-    {
-      conditionMode: first.conditionMode === 'compare' ? 'compare' : 'expression',
-      expression: first.expression || '',
-      field: first.field || '',
-      operator: first.operator || '==',
-      value: first.value ?? '',
-      trueLabel: first.trueLabel || 'true',
-      falseLabel: first.falseLabel || 'false',
-    },
-  ]
 }
 
 const initializeConfig = () => {
-  config.value = normalizeConfig(props.modelValue, currentNodeType.value)
-  if (isSwitchCase.value) {
-    caseText.value = buildCaseText(config.value[0].cases || [])
-  }
+  config.value = normalizeConfig(props.modelValue)
 }
 
 const emitConfig = () => {
-  const value = JSON.parse(JSON.stringify(config.value))
+  const value = JSON.parse(JSON.stringify(config.value)) as Record<string, any>
   emit('update:modelValue', value)
   emit('update:nodeConfig', value)
 }
@@ -271,10 +137,26 @@ const updateConfig = () => {
   emitConfig()
 }
 
-const handleCaseTextChange = () => {
-  config.value[0].cases = parseCaseText(caseText.value)
-  emitConfig()
-}
+const currentNodeId = computed(() => String(props.nodeId || ''))
+
+const fieldOptions = computed<string[]>(() => {
+  const id = currentNodeId.value
+  if (!id) return []
+
+  const sourceNodeIds = new Set(
+    store.edges.filter((edge) => String(edge.target) === id).map((edge) => String(edge.source)),
+  )
+
+  return store.nodes
+    .filter((node) => {
+      return (
+        sourceNodeIds.has(String(node.id)) &&
+        (node.type === 'classification_model@v1' || node.type === 'classification-model')
+      )
+    })
+    .map((node) => `$steps.${String((node as any).name || node.id)}.passed`)
+    .filter((item) => item.length > 0)
+})
 
 const copyJson = () => {
   const json = JSON.stringify(config.value, null, 2)
@@ -289,7 +171,19 @@ const copyJson = () => {
 }
 
 watch(
-  [() => props.modelValue, () => currentNodeType.value],
+  fieldOptions,
+  (list) => {
+    if (!list.length) return
+    const currentCondition = String(config.value?.condition || '')
+    if (currentCondition && list.includes(currentCondition)) return
+    config.value.condition = list[0]
+    emitConfig()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => props.modelValue,
   () => {
     initializeConfig()
   },

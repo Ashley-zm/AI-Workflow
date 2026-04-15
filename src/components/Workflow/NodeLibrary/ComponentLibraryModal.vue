@@ -25,12 +25,13 @@
               v-for="(child, childIndex) in item.children"
               :key="childIndex"
               @click="selectComponent(child)"
-              class="group bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
+              class="group bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:shadow-md transition-all"
+              :class="`border-${child.color}-600 hover:border-${child.color}-500`"
             >
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 rounded-lg flex items-center justify-center"
-                  :class="`bg-${child.color}-50 text-${child.color}-600`"
+                  :class="getIconStyle(child.color)"
                 >
                   <component v-if="child.icon" :size="16" :is="getIconComponent(child.icon)" />
                 </div>
@@ -62,7 +63,11 @@
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { nodeTypesList } from '@/components/Workflow/config/nodeTypes'
-import { getIconComponent, getHoverTextColor } from '@/components/Workflow/config/nodeConfig'
+import {
+  getIconComponent,
+  getHoverTextColor,
+  getIconStyle,
+} from '@/components/Workflow/config/nodeConfig'
 
 const emit = defineEmits<{
   selectComponent: [componentType: string]

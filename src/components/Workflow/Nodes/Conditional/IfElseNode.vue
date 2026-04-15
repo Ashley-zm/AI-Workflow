@@ -15,16 +15,16 @@
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
-            :class="`bg-${nodeColor}-100 text-${nodeColor}-600`"
+            :class="getIconStyle(nodeType?.color)"
           >
             <component :size="18" :is="getIconComponent(nodeType?.icon || 'GitBranch')" />
           </div>
           <div class="flex flex-col">
-            <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ nodeType?.name || 'Conditional_Branch' }}
+            <div class="text-orange-600 text-[10px] rounded-full uppercase font-bold">
+              {{ nodeType?.name || '条件分支' }}
             </div>
             <div class="text-[11px] text-gray-700 tracking-[1px]">
-              {{ nodeType?.description || 'Conditional branch node' }}
+              {{ nodeType?.description || '条件分支节点' }}
             </div>
           </div>
         </div>
@@ -52,7 +52,7 @@
               <Filter :size="14" class="text-white" />
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-[10px] text-slate-400">Condition</div>
+              <div class="text-[10px] text-slate-400">条件表达式</div>
               <div class="text-xs font-medium text-slate-600 truncate">
                 {{ conditionSummary }}
               </div>
@@ -80,28 +80,31 @@
               <GitFork :size="14" class="text-white" />
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-[10px] text-slate-400">Branches</div>
+              <div class="text-[10px] text-slate-400">期望值</div>
               <div class="text-xs font-medium text-slate-600 truncate">
-                {{ branchSummary }}
+                {{ expectedValueDisplay }}
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      <CustomHandle type="target" :position="Position.Left" :node-id="props.id" />
       <CustomHandle
-        type="target"
-        :position="Position.Left"
+        type="source"
+        :position="Position.Right"
         :node-id="props.id"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
+        branch-type="true"
+        :handle-style="{ top: '38%' }"
+        :show-tooltip="true"
       />
       <CustomHandle
         type="source"
         :position="Position.Right"
         :node-id="props.id"
-        :color="nodeColor"
+        branch-type="false"
+        :handle-style="{ top: '68%' }"
         :show-tooltip="true"
-        @handle-click="(event, type, id) => onHandleClick?.(event, type, id)"
       />
     </div>
   </div>
@@ -113,7 +116,7 @@ import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { TriangleAlert, Trash, Filter, GitFork, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent, getIconStyle } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()
@@ -124,47 +127,50 @@ const props = defineProps<{
   type: string
 }>()
 
-const onHandleClick = computed(() => {
-  return props.data?.onHandleClick as (
-    event: MouseEvent,
-    handleType: 'source' | 'target',
-    nodeId: string,
-  ) => void | undefined
+const nodeType = computed(() => getNodeType(props.type))
+const properties = computed(() => {
+  if (Array.isArray(props.data)) {
+    return props.data[0] || {}
+  }
+  return props.data?.config?.[0] || props.data || {}
 })
 
-const nodeType = computed(() => getNodeType(props.type))
-const nodeColor = computed(() => nodeType.value?.color || 'indigo')
-const properties = computed(() => props.data?.config?.[0] || {})
+const conditionField = computed(() => {
+  return String(properties.value?.condition || properties.value?.field || '').trim()
+})
+
+const expectedValue = computed(() => {
+  return properties.value?.expected_value ?? properties.value?.value ?? true
+})
+
+const isEmptyExpectedValue = (value: unknown) => {
+  if (value === null || value === undefined) return true
+  if (typeof value === 'string') return value.trim().length === 0
+  return false
+}
+
+const expectedValueDisplay = computed(() => {
+  const value = expectedValue.value
+  if (isEmptyExpectedValue(value)) return '-'
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+})
+
+const conditionFieldDisplay = computed(() => {
+  return conditionField.value || '-'
+})
 
 const conditionSummary = computed(() => {
-  if (props.type === 'switch_case') {
-    return properties.value?.routeField || 'Please set route field'
-  }
-
-  const expression = properties.value?.expression
-  if (expression) {
-    return expression
-  }
-
-  const field = properties.value?.field
   const operator = properties.value?.operator || '=='
-  const value = properties.value?.value
-  if (field) {
-    return `${field} ${operator} ${value ?? ''}`.trim()
+  if (conditionField.value) {
+    return `${conditionField.value} ${operator} ${expectedValueDisplay.value}`.trim()
   }
 
-  return 'Please set condition expression'
-})
-
-const branchSummary = computed(() => {
-  if (props.type === 'switch_case') {
-    const cases = Array.isArray(properties.value?.cases) ? properties.value.cases : []
-    return `${cases.length} case(s), default: ${properties.value?.defaultLabel || 'default'}`
-  }
-
-  const trueLabel = properties.value?.trueLabel || 'true'
-  const falseLabel = properties.value?.falseLabel || 'false'
-  return `${trueLabel} / ${falseLabel}`
+  return '请配置比较字段'
 })
 
 const deleteNode = () => {
@@ -176,30 +182,14 @@ const isShowTip = ref(true)
 const tipContent = ref('')
 
 const updateTipState = () => {
-  if (props.type === 'switch_case') {
-    const routeField = properties.value?.routeField
-    const cases = Array.isArray(properties.value?.cases) ? properties.value.cases : []
-
-    if (!routeField) {
-      tipContent.value = 'Please configure route field'
-      isShowTip.value = true
-      return
-    }
-
-    if (cases.length === 0) {
-      tipContent.value = 'Please configure at least one case'
-      isShowTip.value = true
-      return
-    }
-
-    isShowTip.value = false
+  if (!conditionField.value) {
+    tipContent.value = '请配置比较字段'
+    isShowTip.value = true
     return
   }
 
-  const expression = properties.value?.expression
-  const field = properties.value?.field
-  if (!expression && !field) {
-    tipContent.value = 'Please configure condition expression'
+  if (isEmptyExpectedValue(expectedValue.value)) {
+    tipContent.value = '请配置期望值'
     isShowTip.value = true
     return
   }

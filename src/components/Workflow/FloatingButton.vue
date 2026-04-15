@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
-import AllNodeSelectors from './Nodes/AllNodeSelectors.vue'
+import AllNodeSelectors from './NodeLibrary/AllNodeSelectors.vue'
 
 // 定义事件
 const emit = defineEmits<{

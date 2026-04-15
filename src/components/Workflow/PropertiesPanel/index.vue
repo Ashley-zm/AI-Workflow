@@ -67,13 +67,12 @@ const propertyComponents = {
   'bounding_box_visualization@v1': markRaw(BoundingBoxVisualizationProperty),
   polygon_visualization: markRaw(PolygonVisualizationProperty),
   label_visualization: markRaw(LabelVisualizationProperty),
-  if_else: markRaw(IfElseProperty),
-  switch_case: markRaw(IfElseProperty),
+  'conditional_branch@v1': markRaw(IfElseProperty),
 }
 
 // 使用 computed 获取当前选中的节点，保证响应性
 const currentNode = computed(() => {
-  console.log('dddd', store.selectedNode)
+  // console.log('dddd', store.selectedNode)
 
   return store.selectedNode
 })

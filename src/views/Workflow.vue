@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative flex h-screen w-full overflow-hidden bg-slate-50"
+    class="relative flex h-screen w-full overflow-hidden bg-white"
     @drop="onDrop"
     @dragover.prevent
   >
@@ -30,10 +30,11 @@
         :pan-on-drag="!isLocked"
         :nodes-draggable="!isLocked"
         :nodes-connectable="!isLocked"
+        :connect-on-click="false"
         :elements-selectable="!isLocked"
       >
+        <!-- 自定义边 （类型为默认）-->
         <template #edge-custom="customEdgeProps">
-          <!--  -->
           <CustomEdge
             :id="customEdgeProps.id"
             :source-x="customEdgeProps.sourceX"
@@ -47,6 +48,7 @@
             :style="customEdgeProps.style"
           />
         </template>
+        <!-- 自定义边 （类型为按钮）-->
         <template #edge-button="buttonEdgeProps">
           <EdgeWithButton
             :id="buttonEdgeProps.id"
@@ -60,6 +62,7 @@
             :style="buttonEdgeProps.style"
           />
         </template>
+        <!-- 自定义连接线 （添加边时显示）-->
         <template #connection-line="{ sourceX, sourceY, targetX, targetY }">
           <CustomConnectionLine
             :source-x="sourceX"
@@ -68,11 +71,9 @@
             :target-y="targetY"
           />
         </template>
-        <Background />
         <MiniMap v-if="showMinimap" class="mini-map" :pannable="true" :zoomable="true" />
       </VueFlow>
 
-      <!-- 右上角工具栏 -->
       <WorkflowToolbar
         class="absolute top-0 right-2 z-10 w-[550px]"
         :nodes="store.nodes"
@@ -87,9 +88,9 @@
         @open-help="handleOpenHelp"
         @toggle-history="toggleHistory"
       />
-      <!-- 调试面板 -->
       <WorkflowDebugPanel
         v-if="isDebugVisible"
+        @click="store.setSelectedNode(null)"
         class="absolute right-4 top-18 z-3"
         :nodes="store.nodes"
         :edges="store.edges"
@@ -99,7 +100,6 @@
         @recheck="handleRecheck"
       />
 
-      <!-- 健康检查面板 -->
       <WorkflowHealthPanel
         v-if="isHealthCheckVisible"
         class="absolute right-4 top-18 z-4"
@@ -107,7 +107,6 @@
         @recheck="handleRecheck"
       />
 
-      <!-- 历史记录面板 -->
       <WorkflowHistoryPanel
         v-if="isHistoryVisible"
         class="absolute right-4 top-18 z-5"
@@ -117,7 +116,6 @@
         @select-history="handleSelectHistory"
       />
 
-      <!-- 底部 控制栏 -->
       <ControlBar
         class="absolute bottom-0 left-0 right-0 z-2"
         :can-undo="store.canUndo"
@@ -134,10 +132,8 @@
         @fit-view="handleFitView"
       />
 
-      <!-- 浮动按钮 -->
       <FloatingButton @drag-start="onDragStart" />
 
-      <!-- 属性面板 -->
       <div
         v-if="store.selectedNode"
         class="w-96 rounded-lg border-l border-gray-200 shadow-2xl absolute right-0 top-20 z-5"
@@ -146,8 +142,6 @@
       </div>
     </div>
 
-    <!-- <HistoryControl /> -->
-    <!-- 组件库 -->
     <ComponentLibraryModal ref="componentLibraryModal" @select-component="handleComponentSelect" />
   </div>
 </template>
@@ -166,7 +160,6 @@ import {
   type NodeChange,
   type NodeMouseEvent,
 } from '@vue-flow/core'
-import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import { workflowApi } from '@/api'
 import { useWorkflowStore } from '@/stores/workflow'
@@ -177,13 +170,11 @@ import ControlBar from '@/components/Workflow/Control/ControlBar.vue'
 import WorkflowToolbar from '@/components/Workflow/Control/WorkflowToolbar.vue'
 import WorkflowHealthPanel from '@/components/Workflow/Control/WorkflowHealthPanel.vue'
 import WorkflowHistoryPanel from '@/components/Workflow/Control/WorkflowHistoryPanel.vue'
-import { allNodeTypes, getNodeType } from '@/components/Workflow/config/nodeTypes'
-// import HistoryControl from '@/components/Workflow/HistoryControl.vue'
+import { allNodeTypes, getNodeType, getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
 import EdgeWithButton from '@/components/Workflow/Edges/EdgeWithButton.vue'
 import CustomEdge from '@/components/Workflow/Edges/CustomEdge.vue'
 import CustomConnectionLine from '@/components/Workflow/Edges/CustomConnectionLine.vue'
-import ComponentLibraryModal from '@/components/Workflow/ComponentLibraryModal.vue'
-// import { getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
+import ComponentLibraryModal from '@/components/Workflow/NodeLibrary/ComponentLibraryModal.vue'
 import WorkflowDebugPanel from '@/components/Workflow/Debug/WorkflowDebugPanel.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { onMounted, onUnmounted, ref, computed, markRaw, nextTick, watch } from 'vue'
@@ -261,10 +252,9 @@ const normalizeNodes = (value: unknown): Node[] => {
 
   return nodes.length > 0 ? nodes : createDefaultNodes()
 }
-
+// 自定义边类型
 const normalizeEdges = (value: unknown): Edge[] => {
   if (!Array.isArray(value)) return []
-
   return value
     .filter((item) => item && typeof item === 'object')
     .map((item, index) => {
@@ -274,6 +264,7 @@ const normalizeEdges = (value: unknown): Edge[] => {
         id: String(edge.id ?? `edge_${index}`),
         source: String(edge.source ?? ''),
         target: String(edge.target ?? ''),
+        ...getNodeEdgeType(),
       } as Edge
     })
     .filter((item) => item.source && item.target)
@@ -375,7 +366,7 @@ const loadWorkflowInfo = async () => {
     store.setWorkflowInfo(normalizedWorkflowInfo)
     await applyWorkflowCanvas(normalizedWorkflowInfo)
   } catch (error) {
-    console.error('鑾峰彇宸ヤ綔娴佽鎯呭紓甯?', error)
+    console.error('Load workflow info failed:', error)
   }
 }
 
@@ -396,7 +387,6 @@ const handleBackClick = async () => {
   await router.push({ name: 'workflow-manage' })
 }
 
-// 璇存槑
 const isLocked = ref(false)
 const showMinimap = ref(true)
 const isDebugVisible = ref(false)
@@ -421,7 +411,6 @@ const toggleHistory = () => {
   isHistoryVisible.value = !isHistoryVisible.value
 }
 
-// 保存工作流
 const handleSave = () => {
   console.log('Save workflow')
 }
@@ -449,6 +438,7 @@ const handleClearCanvas = () => {
 
 const handleDebug = () => {
   console.log('Debug workflow')
+  store.setSelectedNode(null)
   toggleDebug()
 }
 
@@ -469,7 +459,6 @@ const handleSelectHistory = (index: number) => {
   }
 }
 
-// 璇存槑
 const handleZoomIn = () => {
   viewport.value.zoom = Math.min(viewport.value.zoom + 0.1, 4)
   syncViewportInfo()
@@ -481,27 +470,20 @@ const handleZoomOut = () => {
 }
 
 const handleFitView = () => {
-  // 璇存槑
   fitView({ padding: 0.2 })
 }
 
-// 节点事件
 const nodesWithEvents = computed(() => store.nodes as Node[])
-// 边事件
 const edgesWithEvents = computed(() => store.edges as Edge[])
 
 const onNodesChange = (changes: NodeChange[]) => {
   store.nodes = (applyNodeChanges as any)(changes, store.nodes) as Node[]
 }
 
-const onEdgesChange = (changes: EdgeChange[]) => {
-  store.edges = (applyEdgeChanges as any)(changes, store.edges) as Edge[]
-}
+const onEdgesChange = (changes: EdgeChange[]) => {}
 
-// 组件库
 const componentLibraryModal = ref<InstanceType<typeof ComponentLibraryModal>>()
 
-// 节点类型事件
 const nodeTypesWithEvents = computed(() => {
   const enhancedNodeTypes: any = {}
 
@@ -516,20 +498,14 @@ const nodeTypesWithEvents = computed(() => {
   return enhancedNodeTypes
 })
 
-// 工具栏
-console.log('Workflow  store:', store)
 console.log('canUndo:', store.canUndo)
 console.log('canRedo:', store.canRedo)
 
-// 键盘事件
 const handleKeyDown = (event: KeyboardEvent) => {
-  // Ctrl-Z
   if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
     event.preventDefault()
     store.undo()
-  }
-  // Ctrl-Y
-  else if (
+  } else if (
     (event.ctrlKey && event.key === 'y') ||
     (event.ctrlKey && event.shiftKey && event.key === 'z')
   ) {
@@ -537,27 +513,40 @@ const handleKeyDown = (event: KeyboardEvent) => {
     store.redo()
   }
 }
-// 连接事件
+
 onConnect((connection) => {
-  console.log('连接事件:', connection)
-  // 连接事件
+  console.log('Connect event:', connection)
+  if (!connection.source || !connection.target) return
+  if (connection.source === connection.target) return
+  if (store.currentHandleInfo) return
+
+  const sourceHandle = connection.sourceHandle || undefined
+  const targetHandle = connection.targetHandle || undefined
+  const duplicated = store.edges.some(
+    (item) =>
+      item.source === connection.source &&
+      item.target === connection.target &&
+      (item.sourceHandle || undefined) === sourceHandle &&
+      (item.targetHandle || undefined) === targetHandle,
+  )
+  if (duplicated) return
+
   const edge = {
     id: `edge_${Date.now()}`,
     source: connection.source,
     target: connection.target,
+    sourceHandle,
+    targetHandle,
   }
   store.addEdge(edge)
 })
-// 初始化事件
 onMounted(() => {
   document.documentElement.requestFullscreen()
   window.addEventListener('keydown', handleKeyDown)
-  // 初始化事件
   onInit((vueFlowInstance) => {
     isFlowReady.value = true
-    // 初始化事件
     const currentViewport = vueFlowInstance.getViewport()
-    console.log('初始化事件:', currentViewport)
+    console.log('VueFlow init viewport:', currentViewport)
     void loadWorkflowInfo()
   })
 })
@@ -589,33 +578,30 @@ watch(
   { deep: true },
 )
 
-// 点击节点事件
 const onNodeClick = (event: NodeMouseEvent) => {
-  console.log('点击节点事件:', event.node.id, event.node.type, event.node.data)
+  console.log('Node click:', event.node.id, event.node.type, event.node.data)
   store.setSelectedNode(event.node.id)
+  store.clearCurrentHandleInfo()
+  componentLibraryModal.value?.close()
 }
 
-// 拖拽开始事件
 const onDragStart = (event: DragEvent, type: string) => {
-  console.log('拖拽开始事件:', type)
+  console.log('Drag start:', type)
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/vueflow', type)
     event.dataTransfer.effectAllowed = 'move'
   }
 }
-// 璇存槑
 const onPaneClick = (event: MouseEvent) => {
-  console.log('点击画布事件:', event.clientX, event.clientY)
+  console.log('Pane click:', event.clientX, event.clientY)
   store.setSelectedNode(null)
   componentLibraryModal.value?.close()
   store.clearCurrentHandleInfo()
 }
-// 拖拽画布事件
 const onPaneDrag = (event: MouseEvent) => {
-  console.log('拖拽画布事件:', event.clientX, event.clientY)
+  console.log('Pane drag:', event.clientX, event.clientY)
   store.clearCurrentHandleInfo()
 }
-// 拖拽结束事件
 const onDrop = (event: DragEvent) => {
   const type = event.dataTransfer?.getData('application/vueflow')
   if (!type) return
@@ -633,13 +619,11 @@ const onDrop = (event: DragEvent) => {
   }
   store.addNode(newNode)
 }
-// 自动布局事件
 const autoLayout = async () => {
   const nodes = store.nodes
   const edges = store.edges
   if (!nodes.length) return
 
-  // 自动布局事件
   const startX = 120
   const startY = 80
   const horizontalSpacing = NODE_COLUMN_STEP
@@ -672,13 +656,11 @@ const autoLayout = async () => {
     }
   })
 
-  // 自动布局事件
   if (!queue.length && nodes[0]) {
     nodeLevels.set(nodes[0].id, 0)
     queue.push(nodes[0].id)
   }
 
-  // 自动布局事件
   while (queue.length) {
     const currentNodeId = queue.shift()!
     const currentLevel = nodeLevels.get(currentNodeId) ?? 0
@@ -691,7 +673,6 @@ const autoLayout = async () => {
     }
   }
 
-  // 自动布局事件
   let maxAssignedLevel = Math.max(...Array.from(nodeLevels.values()), 0)
   nodes.forEach((node) => {
     if (!nodeLevels.has(node.id)) {
@@ -789,19 +770,16 @@ const autoLayout = async () => {
   fitView({ padding: 0.25 })
 }
 
-// 开启/关闭锁
 const toggleLock = () => {
   isLocked.value = !isLocked.value
 }
 
-// 打开/关闭最小地图
 const toggleMinimap = () => {
   showMinimap.value = !showMinimap.value
 }
 
-// 节点拖动停止事件
 const onNodeDragStop = (event: NodeMouseEvent) => {
-  console.log('节点拖动停止事件:', event.node.id, event.node.position)
+  console.log('Node drag stop:', event.node.id, event.node.position)
   const nodeId = String(event.node.id)
   const nextPosition = {
     x: Number(event.node.position?.x ?? 0),
@@ -818,7 +796,6 @@ const onNodeDragStop = (event: NodeMouseEvent) => {
   store.historyStore.recordState(store.nodes, store.edges, 'node_drag')
 }
 
-// 撤销操作
 const handleUndoClick = () => {
   console.log('Workflow undo clicked')
   console.log('canUndo:', store.canUndo)
@@ -841,7 +818,6 @@ watch(
   },
 )
 
-// 解析新节点位置
 const resolveNewNodePosition = (
   anchorNode: { id: string | number; position: { x: number; y: number } },
   handleType: 'source' | 'target',
@@ -919,27 +895,22 @@ const resolveNewNodePosition = (
     y: anchorY + rowGap,
   }
 }
-// 选择组件事件
 const handleComponentSelect = (componentType: string) => {
-  console.log('选择组件:', componentType)
+  console.log('Select component:', componentType)
   if (!store.currentHandleInfo) return
 
-  const { nodeId } = store.currentHandleInfo
+  const { nodeId, sourceHandle } = store.currentHandleInfo
 
-  // 获取组件类型对象
   const nodeObj = getNodeType(componentType)
   if (!nodeObj) return
   console.log('nodeObj:', nodeObj)
-  // 获取当前节点对象
   const currentNode = store.nodes.find((n) => n.id === nodeId)
   if (!currentNode) return
 
   const newPosition = resolveNewNodePosition(currentNode, 'source')
-  // 计算新节点的唯一ID
   const step = store.nodes.filter((n) => n.type === nodeObj.type).length
   console.log('allNodes-step:', step, store.nodes)
 
-  // 创建新节点
   const newNode = {
     id: step ? `${nodeObj.type}_${step}` : `${nodeObj.type}`,
     type: nodeObj.type,
@@ -947,28 +918,25 @@ const handleComponentSelect = (componentType: string) => {
     position: newPosition,
     data: {},
   }
-
-  // 添加新节点
-  store.addNode(newNode)
-  // 添加新边
   const edge = {
     id: `edge_${Date.now()}`,
     source: nodeId,
     target: newNode.id,
+    sourceHandle: sourceHandle || undefined,
   }
+
+  store.addNode(newNode)
   store.addEdge(edge)
 
-  // 打印新节点和边的信息
-  console.log('新节点:', store.nodes)
-  console.log('新边:', store.edges)
+  console.log('Nodes after add:', store.nodes)
+  console.log('Edges after add:', store.edges)
 
-  // 清除当前节点信息
   store.clearCurrentHandleInfo()
 }
 </script>
 
 <style>
-/* 组件选择动画效果 */
+/* component animation */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: all 0.3s ease-in-out;
@@ -980,7 +948,7 @@ const handleComponentSelect = (componentType: string) => {
   opacity: 0;
 }
 
-/* 组件选择地图 */
+/* mini map */
 .mini-map {
   position: absolute !important;
   /* bottom: 70px !important; */

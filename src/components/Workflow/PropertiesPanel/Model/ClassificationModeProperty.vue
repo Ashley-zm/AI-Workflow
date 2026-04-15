@@ -176,7 +176,7 @@
 
         <div class="flex items-center gap-4">
           <label class="block text-xs font-medium text-slate-700">
-            设备类型 <span class="text-red-500">*</span>
+            推理设备 <span class="text-red-500">*</span>
           </label>
           <el-select
             v-model="data.device"
@@ -538,7 +538,7 @@ const getModelList = async () => {
     if (!data.value.model_repository_id && modelList.value.length > 0) {
       data.value.model_repository_id = modelList.value[0]?.id
       syncModelFields(true)
-      data.value.top_k = 0.5
+      data.value.top_k = 5
       data.value.confidence_threshold = 0.45
     } else {
       syncModelFields(false)

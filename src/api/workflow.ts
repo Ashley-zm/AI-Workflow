@@ -446,10 +446,7 @@ export const workflowApi = USE_WORKFLOW_MOCK
       },
       // 执行工作流
       executeWorkflow(payload: ExecuteWorkflowRequest) {
-        return http.post<never, ApiResponse<ExecuteWorkflowResult>>(
-          `${WORKFLOW_PREFIX}/executeWorkflow`,
-          payload,
-        )
+        return http.post<never, ApiResponse<any>>(`${WORKFLOW_PREFIX}/executeWorkflow`, payload)
       },
       // 部署工作流
       deployWorkflow(id: string) {

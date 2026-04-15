@@ -10,7 +10,7 @@ export const nodeTypesList = [
   },
   {
     name: 'Outputs',
-    description: '查看最终结果及输入数据',
+    description: '输出结果配置',
     icon: 'FileOutput',
     canSelecte: false,
     color: 'gray',
@@ -98,17 +98,9 @@ export const nodeTypesList = [
     children: [
       {
         name: 'If_Else',
-        type: 'if_else',
+        type: 'conditional_branch@v1',
         description: '根据布尔条件在两个分支间路由',
         icon: 'Filter',
-        color: 'orange',
-        nodeTag: 'steps',
-      },
-      {
-        name: 'Switch_Case',
-        type: 'switch_case',
-        description: '根据字段值路由到多个分支',
-        icon: 'Route',
         color: 'orange',
         nodeTag: 'steps',
       },

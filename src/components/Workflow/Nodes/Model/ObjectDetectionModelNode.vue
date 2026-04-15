@@ -15,7 +15,7 @@
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
-            :class="`bg-${nodeColor}-100 text-${nodeColor}-600`"
+            :class="getIconStyle(nodeType?.color)"
           >
             <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
           </div>
@@ -23,9 +23,9 @@
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
               {{ nodeType?.name || 'Model' }}
             </div>
-            <div class="text-[11px] text-gray-700 tracking-[1px]">
+            <p class="text-xs text-gray-500 tracking-[1px]">
               {{ nodeType?.description || 'Model 节点' }}
-            </div>
+            </p>
           </div>
         </div>
         <el-tooltip
@@ -106,7 +106,6 @@
         type="source"
         :position="Position.Right"
         :node-id="props.id"
-        :color="nodeColor"
         :show-tooltip="true"
       />
     </div>
@@ -119,7 +118,7 @@ import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { TriangleAlert, Trash, Image, Brain, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent, getIconStyle } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()

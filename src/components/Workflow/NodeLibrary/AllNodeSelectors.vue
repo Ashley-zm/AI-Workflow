@@ -37,7 +37,7 @@
               <div class="flex items-center gap-3">
                 <div
                   class="w-12 h-12 rounded-lg flex items-center justify-center"
-                  :class="`bg-${item.color}-50 text-${item.color}-600`"
+                  :class="getIconStyle(item.color)"
                 >
                   <component v-if="item.icon" :size="18" :is="getIconComponent(item.icon)" />
                 </div>
@@ -82,7 +82,7 @@
           <div class="flex items-center gap-3">
             <div
               class="w-12 h-12 rounded-lg flex items-center justify-center"
-              :class="`bg-${child.color}-50 text-${child.color}-600`"
+              :class="getIconStyle(child.color)"
             >
               <component v-if="child.icon" :size="20" :is="getIconComponent(child.icon)" />
             </div>
@@ -113,7 +113,11 @@ import { X } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { nodeTypesList } from '@/components/Workflow/config/nodeTypes'
 import { ChevronRight, ChevronLeft } from 'lucide-vue-next'
-import { getIconComponent, getHoverTextColor } from '@/components/Workflow/config/nodeConfig'
+import {
+  getIconComponent,
+  getHoverTextColor,
+  getIconStyle,
+} from '@/components/Workflow/config/nodeConfig'
 // 定义事件
 const emit = defineEmits<{
   dragStart: [event: DragEvent, type: string]

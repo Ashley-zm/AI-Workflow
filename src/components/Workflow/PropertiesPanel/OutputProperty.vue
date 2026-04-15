@@ -73,10 +73,10 @@
                   删除
                 </el-button>
               </div>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 gap-2">
                 <div>
                   <label class="mb-1 block text-[11px] text-slate-500">name</label>
-                  <el-input v-model="field.name" @input="updateOutputConfig" />
+                  <el-input v-model="field.name" @blur="updateOutputConfig" />
                 </div>
                 <div>
                   <label class="mb-1 block text-[11px] text-slate-500">selector</label>
@@ -315,7 +315,6 @@ import {
   Hash,
   Brain,
   Filter,
-  Route,
   GitBranch,
   CheckCircle,
   Download,
@@ -354,7 +353,7 @@ const { findNode, edges } = useVueFlow()
 const expandedNodes = ref(new Set<string>())
 
 interface OutputField {
-  type: string
+  type: 'ImageField' | 'JsonField'
   name: string
   selector: string
 }
@@ -372,12 +371,32 @@ interface SelectorGroup {
 }
 
 const createDefaultOutputField = (index: number): OutputField => ({
-  type: 'JsonField',
+  type: index === 0 ? 'ImageField' : 'JsonField',
   name: `output_${index + 1}`,
   selector: '',
 })
 
 const outputFields = ref<OutputField[]>([createDefaultOutputField(0)])
+
+const resolveFieldTypeBySelector = (selector: string): OutputField['type'] => {
+  return selector.includes('image') ? 'ImageField' : 'JsonField'
+}
+
+const getDefaultFieldNameBySelector = (selector: string, index: number) => {
+  const segments = selector.split('.')
+  const lastSegment = segments[segments.length - 1]?.trim() || ''
+  return lastSegment || `output_${index + 1}`
+}
+
+const normalizeFieldName = (name: unknown, selector: string, index: number) => {
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  if (trimmed) return trimmed
+  return getDefaultFieldNameBySelector(selector, index)
+}
+
+const sanitizeSelector = (value: unknown) => {
+  return typeof value === 'string' ? value.trim() : ''
+}
 
 // 输入数据
 const sourceNodes = computed(() => {
@@ -476,33 +495,72 @@ const normalizeOutputFields = (value: any): OutputField[] => {
 
   const normalized = value
     .filter((item) => item && typeof item === 'object')
-    .map((item, index) => ({
-      type: 'JsonField',
-      name: typeof item.name === 'string' && item.name.trim() ? item.name : `output_${index + 1}`,
-      selector: typeof item.selector === 'string' ? item.selector : '',
-    }))
+    .map((item, index) => {
+      const selector = sanitizeSelector(item.selector)
+      const type =
+        item.type === 'ImageField' || item.type === 'JsonField'
+          ? item.type
+          : resolveFieldTypeBySelector(selector)
+
+      return {
+        type,
+        name: normalizeFieldName(item.name, selector, index),
+        selector,
+      } as OutputField
+    })
 
   return normalized.length > 0 ? normalized : [createDefaultOutputField(0)]
 }
 
-const fillDefaultSelector = (fields: OutputField[]) => {
-  if (!selectorOptions.value.length) return fields
-  return fields.map((field) => ({
-    ...field,
-    selector: field.selector || selectorOptions.value[0]?.value || '',
-  }))
+const syncOutputFieldsWithSelectableData = (fields: OutputField[]) => {
+  const availableSelectors = selectorOptions.value.map((item) => item.value)
+  const availableSelectorSet = new Set(availableSelectors)
+
+  const normalizedFields = fields.map((field, index) => {
+    const selector = sanitizeSelector(field.selector)
+    return {
+      type: resolveFieldTypeBySelector(selector),
+      name: normalizeFieldName(field.name, selector, index),
+      selector,
+    } as OutputField
+  })
+
+  if (!availableSelectors.length) {
+    return normalizedFields.length > 0 ? normalizedFields : [createDefaultOutputField(0)]
+  }
+
+  const seenSelector = new Set<string>()
+  const syncedFields: OutputField[] = []
+
+  normalizedFields.forEach((field) => {
+    if (!field.selector || !availableSelectorSet.has(field.selector)) return
+    if (seenSelector.has(field.selector)) return
+    seenSelector.add(field.selector)
+    syncedFields.push({
+      type: resolveFieldTypeBySelector(field.selector),
+      name: normalizeFieldName(field.name, field.selector, syncedFields.length),
+      selector: field.selector,
+    })
+  })
+
+  if (!syncedFields.length) {
+    const firstSelector = availableSelectors[0] || ''
+    syncedFields.push({
+      type: resolveFieldTypeBySelector(firstSelector),
+      name: getDefaultFieldNameBySelector(firstSelector, 0),
+      selector: firstSelector,
+    })
+  }
+
+  return syncedFields
 }
 
 const initializeOutputFields = () => {
-  outputFields.value = fillDefaultSelector(normalizeOutputFields(props.modelValue))
+  outputFields.value = syncOutputFieldsWithSelectableData(normalizeOutputFields(props.modelValue))
 }
 
 const updateOutputConfig = () => {
-  outputFields.value = outputFields.value.map((field, index) => ({
-    type: 'JsonField',
-    name: field.name?.trim() ? field.name.trim() : `output_${index + 1}`,
-    selector: field.selector || '',
-  }))
+  outputFields.value = syncOutputFieldsWithSelectableData(outputFields.value)
   emit('update:nodeConfig', JSON.parse(JSON.stringify(outputFields.value)))
 }
 
@@ -517,8 +575,11 @@ const addOutputFieldBySelector = (selector: string) => {
     return
   }
 
-  const field = createDefaultOutputField(outputFields.value.length)
-  field.selector = selector
+  const field: OutputField = {
+    type: resolveFieldTypeBySelector(selector),
+    name: getDefaultFieldNameBySelector(selector, outputFields.value.length),
+    selector,
+  }
   outputFields.value.push(field)
   updateOutputConfig()
 }
@@ -563,8 +624,7 @@ const getNodeTypeIcon = (type: string | undefined) => {
     processing: Hash,
     visualization: Hash,
     conditional_branch: GitBranch,
-    if_else: Filter,
-    switch_case: Route,
+    'conditional_branch@v1': Filter,
   }
   return iconMap[type] || Database
 }
@@ -728,7 +788,7 @@ watch(
 watch(
   selectorOptions,
   () => {
-    const merged = fillDefaultSelector(outputFields.value)
+    const merged = syncOutputFieldsWithSelectableData(outputFields.value)
     const changed = JSON.stringify(merged) !== JSON.stringify(outputFields.value)
     if (changed) {
       outputFields.value = merged
