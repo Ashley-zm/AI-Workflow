@@ -1,5 +1,14 @@
 <template>
   <BaseEdge :id="id" :style="edgeStyle" :path="path[0]" :marker-end="markerEnd" />
+  <path
+    :d="path[0]"
+    fill="none"
+    stroke="transparent"
+    :stroke-width="20"
+    style="pointer-events: stroke"
+    @mouseenter="isEdgeHovered = true"
+    @mouseleave="isEdgeHovered = false"
+  />
   <EdgeLabelRenderer>
     <div
       v-if="labelVisible"
@@ -9,6 +18,8 @@
         position: 'absolute',
         transform: `translate(-50%, -50%) translate(${path[1]}px,${path[2]}px)`,
       }"
+      @mouseenter="isButtonHovered = true"
+      @mouseleave="isButtonHovered = false"
     >
       <X :size="14" @click="handleClickRemove" />
     </div>
@@ -73,7 +84,9 @@ const edgeStyle = computed(() => ({
   ...(props.style || {}),
 }))
 
-const labelVisible = ref(true)
+const isEdgeHovered = ref(false)
+const isButtonHovered = ref(false)
+const labelVisible = computed(() => isEdgeHovered.value || isButtonHovered.value)
 const handleClickRemove = () => {
   store.removeEdge(props.id)
 }

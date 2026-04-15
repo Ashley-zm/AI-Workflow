@@ -88,21 +88,6 @@
         </div>
       </div>
 
-      <!-- <div>
-        <div class="flex items-center gap-2 mb-3">
-          <div class="h-4 w-0.5 rounded-full bg-purple-500"></div>
-          <h3 class="text-sm font-semibold text-slate-800">节点配置</h3>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <label class="block text-xs font-medium text-slate-700 mb-2">节点名称</label>
-          <el-input v-model="nodeLabel" size="default" placeholder="命名该节点..." class="w-full">
-            <template #prefix>
-              <Type :size="14" class="text-slate-400" />
-            </template>
-          </el-input>
-        </div>
-      </div> -->
-
       <!-- Input Data -->
       <div>
         <div class="flex items-center justify-between mb-3">
@@ -239,7 +224,7 @@
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <div class="h-4 w-0.5 rounded-full bg-blue-500"></div>
-            <h3 class="text-sm font-semibold text-slate-800">输出数据</h3>
+            <h3 class="text-sm font-semibold text-slate-800">JSON预览</h3>
           </div>
           <div class="flex items-center gap-2">
             <el-button
@@ -254,7 +239,7 @@
             </el-button>
           </div>
         </div>
-        <!-- 输出数据 -->
+        <!-- JSON预览 -->
         <div v-if="outputNodes" class="space-y-3">
           <div
             class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden hover:border-purple-300 transition-all hover:shadow-md"
@@ -338,18 +323,6 @@ const emit = defineEmits<{
 }>()
 
 const { findNode, edges } = useVueFlow()
-
-// const currentNode = computed(() => findNode(props.nodeId))
-
-// const nodeLabel = computed({
-//   get: () => currentNode.value?.data?.label || '',
-//   set: (val) => {
-//     if (currentNode.value) {
-//       currentNode.value.data = { ...currentNode.value.data, label: val }
-//     }
-//   },
-// })
-
 const expandedNodes = ref(new Set<string>())
 
 interface OutputField {
@@ -370,6 +343,36 @@ interface SelectorGroup {
   options: SelectorOption[]
 }
 
+const getSelectorOptionsByNode = (node: Node): SelectorOption[] => {
+  const options: SelectorOption[] = []
+  const nodeName = (node as any).name || node.id
+
+  if (node.type === 'inputs') {
+    const nodeData = node.data
+    if (!Array.isArray(nodeData)) return []
+    nodeData.forEach((item: any) => {
+      if (!item || typeof item.name !== 'string' || !item.name) return
+      const value = `$inputs.${item.name}`
+      options.push({
+        label: value,
+        value,
+      })
+    })
+    return options
+  }
+
+  const outputs = getOutputsByType(node.type)
+  outputs.forEach((outputKey: string) => {
+    const value = `$steps.${nodeName}.${outputKey}`
+    options.push({
+      label: value,
+      value,
+    })
+  })
+
+  return options
+}
+
 const createDefaultOutputField = (index: number): OutputField => ({
   type: index === 0 ? 'ImageField' : 'JsonField',
   name: `output_${index + 1}`,
@@ -384,7 +387,14 @@ const resolveFieldTypeBySelector = (selector: string): OutputField['type'] => {
 
 const getDefaultFieldNameBySelector = (selector: string, index: number) => {
   const segments = selector.split('.')
+  console.log('hguisfhuisdfhg', segments)
+  if (segments.length > 2) {
+    const prefix = segments[segments.length - 2]?.trim() || ''
+    const lastSegment = segments[segments.length - 1]?.trim() || ''
+    return `${prefix}_${lastSegment || `${index + 1}`}`
+  }
   const lastSegment = segments[segments.length - 1]?.trim() || ''
+  console.log('非递归算法股市大幅改变', lastSegment)
   return lastSegment || `output_${index + 1}`
 }
 
@@ -424,32 +434,25 @@ const sourceNodes = computed(() => {
   return Array.from(ancestors.values())
 })
 
+const directSourceNodes = computed(() => {
+  if (!props.nodeId) return []
+
+  const directSources = new Map<string, Node>()
+  const parentEdges = edges.value.filter((edge) => edge.target === props.nodeId)
+  parentEdges.forEach((edge) => {
+    const sourceNode = findNode(edge.source)
+    if (!sourceNode || directSources.has(sourceNode.id)) return
+    directSources.set(sourceNode.id, sourceNode)
+  })
+
+  return Array.from(directSources.values())
+})
+
 const selectorOptions = computed<SelectorOption[]>(() => {
   const options: SelectorOption[] = []
 
   sourceNodes.value.forEach((node) => {
-    const nodeName = node.name
-    const nodeData = node.data
-
-    if (node.type === 'inputs') {
-      if (!Array.isArray(nodeData)) return
-      nodeData.forEach((item: any) => {
-        if (!item || typeof item.name !== 'string' || !item.name) return
-        options.push({
-          label: `$inputs.${item.name}`,
-          value: `$inputs.${item.name}`,
-        })
-      })
-      return
-    }
-
-    const outputs = getOutputsByType(node.type)
-    outputs.forEach((outputKey: string) => {
-      options.push({
-        label: `$steps.${nodeName}.${outputKey}`,
-        value: `$steps.${nodeName}.${outputKey}`,
-      })
-    })
+    options.push(...getSelectorOptionsByNode(node))
   })
 
   return Array.from(new Map(options.map((item) => [item.value, item])).values())
@@ -459,24 +462,7 @@ const selectorGroups = computed<SelectorGroup[]>(() => {
   return sourceNodes.value
     .map((node) => {
       const nodeName = (node as any).name || node.id
-      const options: SelectorOption[] = []
-
-      if (node.type === 'inputs') {
-        const nodeData = node.data
-        if (Array.isArray(nodeData)) {
-          nodeData.forEach((item: any) => {
-            if (!item || typeof item.name !== 'string' || !item.name) return
-            const value = `$inputs.${item.name}`
-            options.push({ label: value, value })
-          })
-        }
-      } else {
-        const outputs = getOutputsByType(node.type)
-        outputs.forEach((outputKey: string) => {
-          const value = `$steps.${nodeName}.${outputKey}`
-          options.push({ label: value, value })
-        })
-      }
+      const options = getSelectorOptionsByNode(node)
 
       return {
         nodeId: node.id,
@@ -515,6 +501,13 @@ const normalizeOutputFields = (value: any): OutputField[] => {
 const syncOutputFieldsWithSelectableData = (fields: OutputField[]) => {
   const availableSelectors = selectorOptions.value.map((item) => item.value)
   const availableSelectorSet = new Set(availableSelectors)
+  const defaultSelectorsFromDirectSources = Array.from(
+    new Set(
+      directSourceNodes.value
+        .flatMap((node) => getSelectorOptionsByNode(node).map((option) => option.value))
+        .filter((selector) => availableSelectorSet.has(selector)),
+    ),
+  )
 
   const normalizedFields = fields.map((field, index) => {
     const selector = sanitizeSelector(field.selector)
@@ -544,19 +537,69 @@ const syncOutputFieldsWithSelectableData = (fields: OutputField[]) => {
   })
 
   if (!syncedFields.length) {
-    const firstSelector = availableSelectors[0] || ''
-    syncedFields.push({
-      type: resolveFieldTypeBySelector(firstSelector),
-      name: getDefaultFieldNameBySelector(firstSelector, 0),
-      selector: firstSelector,
+    const fallbackSelectors = defaultSelectorsFromDirectSources.length
+      ? defaultSelectorsFromDirectSources
+      : availableSelectors.slice(0, 1)
+
+    fallbackSelectors.forEach((selector, index) => {
+      syncedFields.push({
+        type: resolveFieldTypeBySelector(selector),
+        name: getDefaultFieldNameBySelector(selector, index),
+        selector,
+      })
     })
   }
 
   return syncedFields
 }
 
+const mergeMissingDefaultSelectorsFromDirectSources = (fields: OutputField[]) => {
+  const availableSelectors = selectorOptions.value.map((item) => item.value)
+  const availableSelectorSet = new Set(availableSelectors)
+  const defaultSelectorsFromDirectSources = Array.from(
+    new Set(
+      directSourceNodes.value
+        .flatMap((node) => getSelectorOptionsByNode(node).map((option) => option.value))
+        .filter((selector) => availableSelectorSet.has(selector)),
+    ),
+  )
+
+  if (!defaultSelectorsFromDirectSources.length) {
+    return syncOutputFieldsWithSelectableData(fields)
+  }
+
+  const normalized = syncOutputFieldsWithSelectableData(fields)
+  const selectedSelectorSet = new Set(
+    normalized.map((field) => sanitizeSelector(field.selector)).filter((selector) => !!selector),
+  )
+  const merged = [...normalized]
+
+  defaultSelectorsFromDirectSources.forEach((selector) => {
+    if (selectedSelectorSet.has(selector)) return
+    selectedSelectorSet.add(selector)
+    merged.push({
+      type: resolveFieldTypeBySelector(selector),
+      name: getDefaultFieldNameBySelector(selector, merged.length),
+      selector,
+    })
+  })
+
+  return merged
+}
+
+const isSameFields = (a: OutputField[], b: OutputField[]) => {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 const initializeOutputFields = () => {
-  outputFields.value = syncOutputFieldsWithSelectableData(normalizeOutputFields(props.modelValue))
+  const normalizedFromProps = syncOutputFieldsWithSelectableData(normalizeOutputFields(props.modelValue))
+  const initialized = mergeMissingDefaultSelectorsFromDirectSources(normalizedFromProps)
+  outputFields.value = initialized
+
+  // 初始化若自动补齐了默认 selector，需要回写到节点 data
+  if (!isSameFields(initialized, normalizedFromProps)) {
+    emit('update:nodeConfig', JSON.parse(JSON.stringify(initialized)))
+  }
 }
 
 const updateOutputConfig = () => {
@@ -591,7 +634,7 @@ const removeOutputField = (index: number) => {
   }
   updateOutputConfig()
 }
-// 输出数据
+// JSON预览
 const outputNodes = computed(() => {
   if (!props.nodeId) {
     return null
@@ -737,7 +780,7 @@ const copyOutputData = async () => {
     ElMessage.warning('暂无输出数据')
     return
   }
-  await copyText(formattedOutputNodes.value, '已复制输出数据', '复制失败')
+  await copyText(formattedOutputNodes.value, '已复制JSON预览', '复制失败')
 }
 
 const downloadText = (text: string, filename: string, successMsg: string) => {
@@ -788,7 +831,7 @@ watch(
 watch(
   selectorOptions,
   () => {
-    const merged = syncOutputFieldsWithSelectableData(outputFields.value)
+    const merged = mergeMissingDefaultSelectorsFromDirectSources(outputFields.value)
     const changed = JSON.stringify(merged) !== JSON.stringify(outputFields.value)
     if (changed) {
       outputFields.value = merged
