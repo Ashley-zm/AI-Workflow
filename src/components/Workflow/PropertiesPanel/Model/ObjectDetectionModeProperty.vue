@@ -43,13 +43,13 @@
               <div class="text-emerald-600">{{ data.images }}</div>
             </div>
           </div>
-          <button
+          <!-- <button
             title="清空选择"
             class="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-100"
             @click="clearSelectedImage"
           >
             <X :size="16" />
-          </button>
+          </button> -->
         </div>
 
         <div
@@ -292,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { Picture, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -354,7 +354,7 @@ const defaultData = (): Property => ({
 const data = ref<Property>(defaultData())
 
 const availableImageNodes = computed(() => {
-  return store.nodes
+  const imageNodes = store.nodes
     .filter((node) => {
       const nodeProperties = node.data
       if (!nodeProperties || !Array.isArray(nodeProperties)) return false
@@ -365,6 +365,12 @@ const availableImageNodes = computed(() => {
       type: node.type,
       imageProperties: (node.data as any[]).filter((prop: any) => prop.type === 'image'),
     }))
+  if (imageNodes && imageNodes.length > 0) {
+    selectImageProperty(imageNodes[0], imageNodes?.[0]?.imageProperties?.[0])
+  } else {
+    clearSelectedImage()
+  }
+  return imageNodes
 })
 
 const selectedModelInfo = computed(() => {
@@ -408,7 +414,7 @@ const selectImageProperty = (node: any, property: any) => {
   data.value.images = `$${node.id}.${property.name}`
   showImageSelectionDialog.value = false
   updateConfig()
-  ElMessage.success(`已选择图片属性: ${data.value.images}`)
+  // ElMessage.success(`已选择图片属性: ${data.value.images}`)
 }
 
 const clearSelectedImage = () => {
@@ -541,15 +547,13 @@ const getGpu = async () => {
 
 watch(
   () => props.modelValue,
-  () => initializeData(),
+  async () => {
+    initializeData()
+    await getGpu()
+    await getModelList()
+  },
   { deep: true, immediate: true },
 )
-
-onMounted(async () => {
-  console.log('onMounted', props.nodeObj, props.modelValue)
-  await getGpu()
-  await getModelList()
-})
 </script>
 
 <style>

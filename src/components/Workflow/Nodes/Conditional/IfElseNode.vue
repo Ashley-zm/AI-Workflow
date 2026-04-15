@@ -21,7 +21,7 @@
           </div>
           <div class="flex flex-col">
             <div class="text-orange-600 text-[10px] rounded-full uppercase font-bold">
-              {{ nodeType?.name || '条件分支' }}
+              {{ props.id || '条件分支' }}
             </div>
             <div class="text-[11px] text-gray-700 tracking-[1px]">
               {{ nodeType?.description || '条件分支节点' }}

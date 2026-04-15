@@ -45,13 +45,13 @@
               <div class="text-emerald-600">{{ data.image }}</div>
             </div>
           </div>
-          <button
+          <!-- <button
             class="rounded-lg p-1.5 text-red-500 hover:bg-red-100 transition-colors"
             title="清空选择"
             @click="clearSelectedImage"
           >
             <X :size="16" />
-          </button>
+          </button> -->
         </div>
 
         <div
@@ -119,13 +119,13 @@
               <div class="text-emerald-600">{{ data.predictions }}</div>
             </div>
           </div>
-          <button
+          <!-- <button
             class="rounded-lg p-1.5 text-red-500 hover:bg-red-100 transition-colors"
             title="清空选择"
             @click="clearSelectedPrediction"
           >
             <X :size="16" />
-          </button>
+          </button> -->
         </div>
 
         <div
@@ -387,7 +387,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { Picture, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -445,7 +445,7 @@ const getImageProperties = (node: any) => {
 }
 
 const availableImageNodes = computed(() => {
-  return store.nodes
+  const imageNodes = store.nodes
     .filter((node) => {
       return getImageProperties(node).length > 0
     })
@@ -456,6 +456,12 @@ const availableImageNodes = computed(() => {
         imageProperties: getImageProperties(node),
       }
     })
+  if (imageNodes && imageNodes.length > 0) {
+    selectImageProperty(imageNodes[0], imageNodes?.[0]?.imageProperties?.[0])
+  } else {
+    clearSelectedImage()
+  }
+  return imageNodes
 })
 
 const modelTypes = new Set([
@@ -479,8 +485,7 @@ const availablePredictionNodes = computed(() => {
       .filter((edge) => String(edge.target) === currentId)
       .map((edge) => String(edge.source)),
   )
-
-  return store.nodes
+  const predictionNodes = store.nodes
     .filter((node) => {
       return sourceNodeIds.has(String(node.id)) && modelTypes.has(String(node.type))
     })
@@ -492,6 +497,16 @@ const availablePredictionNodes = computed(() => {
         predictionProperties: node?.data || {},
       }
     })
+  if (predictionNodes && predictionNodes.length > 0) {
+    nextTick(() => {
+      selectPredictionProperty(predictionNodes[0], predictionNodes[0]?.predictionProperties)
+    })
+  } else {
+    nextTick(() => {
+      clearSelectedPrediction()
+    })
+  }
+  return predictionNodes
 })
 
 const selectImageProperty = (node: any, property: any) => {

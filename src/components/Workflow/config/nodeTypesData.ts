@@ -25,7 +25,7 @@ export const nodeTypesList = [
     color: 'blue',
     children: [
       {
-        name: 'detect',
+        name: 'Detection_Model',
         type: 'detection_model@v1',
         description: '目标检测模型',
         icon: 'Brain',

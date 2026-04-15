@@ -21,7 +21,7 @@
           </div>
           <div class="flex flex-col">
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ nodeType?.name || 'Visualization' }}
+              {{ props.id || 'Visualization' }}
             </div>
             <p class="text-xs text-gray-500 tracking-[1px]">
               {{ nodeType?.description || 'Label 节点' }}

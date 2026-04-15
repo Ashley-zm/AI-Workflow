@@ -2,13 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { Node, Edge } from '@vue-flow/core'
 import { useHistoryStore } from './history'
-import type {
-  AddOrUpdateTemplateRequest,
-  AddOrUpdateWorkflowRequest,
-  WorkflowEntity,
-} from '@/types/workflow-api'
-import { ElMessage } from 'element-plus'
-// import { MarkerType } from '@vue-flow/core'
+import type { WorkflowEntity } from '@/types/workflow-api'
+import { getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
 
 interface WorkflowViewportInfo {
   x: number
@@ -102,6 +97,166 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const workflowHealthOutputNodeCount = computed(
     () => nodes.value.filter((item) => item.type === 'outputs').length,
   )
+
+  type RefReplacementValue = string | undefined
+
+  const cloneData = <T>(value: T): T => {
+    if (value === undefined) return value
+    return JSON.parse(JSON.stringify(value)) as T
+  }
+
+  const normalizeName = (value: unknown) => {
+    if (typeof value !== 'string') return ''
+    return value.trim()
+  }
+
+  const getNodeName = (node: Node) => {
+    const explicitName = normalizeName((node as any).name)
+    if (explicitName) return explicitName
+    return String(node.id ?? '')
+  }
+
+  const extractNameListFromNodeData = (data: unknown): string[] => {
+    if (!Array.isArray(data)) return []
+    return data.map((item: any) => normalizeName(item?.name)).filter((name) => name.length > 0)
+  }
+
+  const buildNameReplacementMap = (prevData: unknown, nextData: unknown) => {
+    const prevNames = extractNameListFromNodeData(prevData)
+    const nextNames = extractNameListFromNodeData(nextData)
+    const nextSet = new Set(nextNames)
+    const replacements = new Map<string, RefReplacementValue>()
+
+    const pairedSize = Math.min(prevNames.length, nextNames.length)
+    for (let index = 0; index < pairedSize; index += 1) {
+      const oldName = prevNames[index]
+      const newName = nextNames[index]
+      if (!oldName) continue
+      if (!newName) {
+        replacements.set(oldName, undefined)
+        continue
+      }
+      if (oldName !== newName) {
+        replacements.set(oldName, newName)
+      }
+    }
+
+    prevNames.forEach((oldName) => {
+      if (!oldName) return
+      if (nextSet.has(oldName)) return
+      if (replacements.has(oldName)) return
+      replacements.set(oldName, undefined)
+    })
+
+    return replacements
+  }
+
+  const replaceRefsInValue = (
+    value: unknown,
+    exactMap: Map<string, RefReplacementValue>,
+    clearPrefixes: string[],
+  ): { nextValue: unknown; changed: boolean } => {
+    if (typeof value === 'string') {
+      if (exactMap.has(value)) {
+        return { nextValue: exactMap.get(value), changed: true }
+      }
+      if (clearPrefixes.some((prefix) => prefix && value.startsWith(prefix))) {
+        return { nextValue: undefined, changed: true }
+      }
+      return { nextValue: value, changed: false }
+    }
+
+    if (Array.isArray(value)) {
+      let changed = false
+      const nextArray = value.map((item) => {
+        const result = replaceRefsInValue(item, exactMap, clearPrefixes)
+        if (result.changed) changed = true
+        return result.nextValue
+      })
+      return changed
+        ? { nextValue: nextArray, changed: true }
+        : { nextValue: value, changed: false }
+    }
+
+    if (!value || typeof value !== 'object') {
+      return { nextValue: value, changed: false }
+    }
+
+    let changed = false
+    const nextObject: Record<string, unknown> = {}
+    Object.entries(value as Record<string, unknown>).forEach(([key, rawValue]) => {
+      const result = replaceRefsInValue(rawValue, exactMap, clearPrefixes)
+      if (result.changed) changed = true
+      nextObject[key] = result.nextValue
+    })
+
+    return changed ? { nextValue: nextObject, changed: true } : { nextValue: value, changed: false }
+  }
+
+  const applyReferenceUpdatesToOtherNodes = (params: {
+    exactMap?: Map<string, RefReplacementValue>
+    clearPrefixes?: string[]
+    excludeNodeId?: string
+  }) => {
+    const exactMap = params.exactMap ?? new Map<string, RefReplacementValue>()
+    const clearPrefixes = params.clearPrefixes ?? []
+    const excludeNodeId = params.excludeNodeId
+
+    if (exactMap.size === 0 && clearPrefixes.length === 0) return
+
+    let changed = false
+    nodes.value = nodes.value.map((node) => {
+      if (excludeNodeId && String(node.id) === excludeNodeId) return node
+      const replaced = replaceRefsInValue(node.data, exactMap, clearPrefixes)
+      if (!replaced.changed) return node
+      changed = true
+      return {
+        ...node,
+        data: replaced.nextValue as any,
+      } as Node
+    })
+
+    if (changed && selectedNode.value?.id) {
+      selectedNode.value = nodes.value.find((node) => node.id === selectedNode.value?.id) || null
+    }
+  }
+
+  const updateAllData = (currentNode: Node, previousData: unknown, nextData: unknown) => {
+    console.log('updateAllData', currentNode, previousData, nextData)
+    const nodeId = String(currentNode.id ?? '')
+    const nameReplacements = buildNameReplacementMap(previousData, nextData)
+    if (nameReplacements.size === 0) return
+
+    const exactMap = new Map<string, RefReplacementValue>()
+    nameReplacements.forEach((newName, oldName) => {
+      const oldRef = `$inputs.${oldName}`
+      exactMap.set(oldRef, newName ? `$inputs.${newName}` : undefined)
+    })
+
+    applyReferenceUpdatesToOtherNodes({
+      exactMap,
+      excludeNodeId: nodeId,
+    })
+  }
+
+  const clearRemovedNodeReferences = (removedNode: Node) => {
+    const nodeType = String(removedNode.type ?? '')
+    const nodeName = getNodeName(removedNode)
+    const clearPrefixes: string[] = []
+
+    if (nodeType === 'inputs') {
+      clearPrefixes.push('$inputs.')
+    } else if (nodeType !== 'outputs') {
+      clearPrefixes.push(`$steps.${nodeName}.`)
+    }
+
+    if (clearPrefixes.length === 0) return
+
+    applyReferenceUpdatesToOtherNodes({
+      clearPrefixes,
+      excludeNodeId: String(removedNode.id ?? ''),
+    })
+  }
 
   const workflowHealthSummaryTitle = computed(() => {
     if (workflowHealthStatus.value === 'healthy') return '检查通过'
@@ -462,8 +617,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 删除节点
   const removeNode = (nodeId: string) => {
+    const removedNode = nodes.value.find((n) => String(n.id) === String(nodeId))
+    if (!removedNode) return
+
+    clearRemovedNodeReferences(removedNode as Node)
     nodes.value = nodes.value.filter((n) => n.id !== nodeId)
     edges.value = edges.value.filter((e) => e.source !== nodeId && e.target !== nodeId)
+    if (selectedNode.value?.id === nodeId) {
+      selectedNode.value = null
+    }
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'remove_node')
   }
@@ -471,13 +633,16 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 更新节点数据
   const updateNode = (nodeId: string, data: any) => {
     const nodeIndex = nodes.value.findIndex((n) => n.id === nodeId)
+    console.log('有吗:', nodeIndex, nodeId, selectedNode.value?.id)
+
     if (nodeIndex === -1) return
 
-    const nextData = JSON.parse(JSON.stringify(data))
+    const nextData = cloneData(data)
     const currentNode = nodes.value[nodeIndex] as Node
-    console.log('更新节点数据前:', currentNode)
-    const currentData = JSON.parse(JSON.stringify(currentNode.data))
+    // console.log('更新节点数据前:', currentNode)
+    const currentData = cloneData(currentNode.data)
 
+    // 保证属性面板引用的是最新节点对象
     // 数据没有变化时不记录历史，避免无效历史堆积
     if (JSON.stringify(currentData) === JSON.stringify(nextData)) return
 
@@ -485,14 +650,16 @@ export const useWorkflowStore = defineStore('workflow', () => {
       ...currentNode,
       data: nextData,
     }
-    console.log('更新节点数据后:', updatedNode)
+    if (selectedNode.value?.id === nodeId) {
+      selectedNode.value = updatedNode
+    }
+    // console.log('更新节点数据后:', updatedNode)
     // 替换整个数组引用，确保依赖 nodes 的组件（如 VueFlow）能稳定感知更新
     nodes.value = nodes.value.map((node, index) =>
       index === nodeIndex ? (updatedNode as Node) : node,
     )
-    // 保证属性面板引用的是最新节点对象
-    if (selectedNode.value?.id === nodeId) {
-      selectedNode.value = nodes.value.find((n) => n.id === nodeId) || null
+    if (String(updatedNode.type ?? '') === 'inputs') {
+      updateAllData(updatedNode as Node, currentData, nextData)
     }
 
     // 记录操作后的状态
@@ -503,8 +670,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const addEdge = (edge: Edge) => {
     edges.value.push({
       ...edge,
-      type: edge.type || 'button',
+      ...getNodeEdgeType(),
     })
+    // console.log('添加边:', edge)
     // 记录操作后的状态
     historyStore.recordState(nodes.value, edges.value, 'add_edge')
   }
@@ -533,19 +701,19 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 撤销操作
   const undo = () => {
-    console.log('workflow.undo() 被调用')
+    // console.log('workflow.undo() 被调用')
     try {
       const previousState = historyStore.undo()
-      console.log('撤销获取到的状态:', previousState)
+      // console.log('撤销获取到的状态:', previousState)
       if (previousState) {
         nodes.value = previousState.nodes
         edges.value = previousState.edges
         // 撤销后清除选中状态
         selectedNode.value = null
-        console.log('撤销操作完成')
+        // console.log('撤销操作完成')
         return true
       } else {
-        console.log('没有可撤销的状态')
+        // console.log('没有可撤销的状态')
         return false
       }
     } catch (error) {
@@ -556,19 +724,19 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   // 重做操作
   const redo = () => {
-    console.log('workflow.redo() 被调用')
+    // console.log('workflow.redo() 被调用')
     try {
       const nextState = historyStore.redo()
-      console.log('重做获取到的状态:', nextState)
+      // console.log('重做获取到的状态:', nextState)
       if (nextState) {
         nodes.value = nextState.nodes
         edges.value = nextState.edges
         // 重做后清除选中状态
         selectedNode.value = null
-        console.log('重做操作完成')
+        // console.log('重做操作完成')
         return true
       } else {
-        console.log('没有可重做的状态')
+        // console.log('没有可重做的状态')
         return false
       }
     } catch (error) {
@@ -586,7 +754,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   const getViewportInfo = computed(() => viewportInfo.value)
 
   const getSaveWorkflowData = (): any => {
-    console.log('nodes.value', nodes.value)
+    // console.log('nodes.value', nodes.value)
 
     return {
       name: workflowInfo.value.workflowName,

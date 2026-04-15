@@ -17,7 +17,7 @@
         </div>
         <div class="flex flex-col">
           <span class="text-sm font-bold text-slate-700">
-            {{ nodeType?.name || 'Input' }}
+            {{ props.id || 'Input' }}
           </span>
           <p class="text-xs text-gray-500 tracking-[1px]">
             {{ nodeType?.description || 'Input 节点' }}

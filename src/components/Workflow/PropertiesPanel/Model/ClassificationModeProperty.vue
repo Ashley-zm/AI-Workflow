@@ -43,13 +43,13 @@
               <div class="text-emerald-600">{{ data.images }}</div>
             </div>
           </div>
-          <button
+          <!-- <button
             title="清空选择"
             class="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-100"
             @click="clearSelectedImage"
           >
             <X :size="16" />
-          </button>
+          </button> -->
         </div>
 
         <div
@@ -378,7 +378,7 @@ const defaultData = (): Property => ({
 const data = ref<Property>(defaultData())
 
 const availableImageNodes = computed(() => {
-  return store.nodes
+  const imageNodes = store.nodes
     .filter((node) => {
       const nodeProperties = node.data
       if (!nodeProperties || !Array.isArray(nodeProperties)) return false
@@ -389,6 +389,12 @@ const availableImageNodes = computed(() => {
       type: node.type,
       imageProperties: (node.data as any[]).filter((prop: any) => prop.type === 'image'),
     }))
+  if (imageNodes && imageNodes.length > 0) {
+    selectImageProperty(imageNodes[0], imageNodes?.[0]?.imageProperties?.[0])
+  } else {
+    clearSelectedImage()
+  }
+  return imageNodes
 })
 
 const selectedModelInfo = computed(() => {
@@ -434,7 +440,7 @@ const selectImageProperty = (node: any, property: any) => {
   data.value.images = `$${node.id}.${property.name}`
   showImageSelectionDialog.value = false
   updateConfig()
-  ElMessage.success(`已选择图片属性: ${data.value.images}`)
+  // ElMessage.success(`已选择图片属性: ${data.value.images}`)
 }
 
 const clearSelectedImage = () => {
@@ -511,11 +517,8 @@ const type: Record<string, string> = {
 }
 
 const getModelList = async () => {
-  console.log('模型类型：props.nodeObj', props.nodeObj.type, type[props.nodeObj.type])
-
   try {
     const res = await getModelServiceList({
-      // algorithmTypeDictId: 'detection',
       algorithmTypeDictId: type[props.nodeObj.type] || '',
       pageNum: 1,
       pageSize: 1000,
@@ -567,14 +570,13 @@ const getGpu = async () => {
 
 watch(
   () => props.modelValue,
-  () => initializeData(),
+  async () => {
+    initializeData()
+    await getGpu()
+    await getModelList()
+  },
   { deep: true, immediate: true },
 )
-
-onMounted(async () => {
-  await getGpu()
-  await getModelList()
-})
 </script>
 
 <style>

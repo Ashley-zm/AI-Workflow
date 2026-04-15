@@ -461,7 +461,9 @@
                       class="w-full h-24 object-contain cursor-pointer hover:opacity-80 transition-opacity"
                       @click="previewImage(img.url)"
                     />
-                    <div class="border-t border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-500">
+                    <div
+                      class="border-t border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-500"
+                    >
                       {{ img.fieldName }}
                     </div>
                   </div>
@@ -615,7 +617,6 @@ interface ExecutionLog {
 const props = defineProps<{
   nodes: Node[]
   edges: Edge[]
-  selectedNode: Node | null
   historyLength: number
 }>()
 

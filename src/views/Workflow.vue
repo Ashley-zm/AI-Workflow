@@ -94,7 +94,6 @@
         class="absolute right-4 top-18 z-3"
         :nodes="store.nodes"
         :edges="store.edges"
-        :selected-node="store.selectedNode"
         :history-length="store.historyStore.history.length"
         @close="toggleDebug"
         @recheck="handleRecheck"
@@ -523,12 +522,9 @@ onConnect((connection) => {
   const sourceHandle = connection.sourceHandle || undefined
   const targetHandle = connection.targetHandle || undefined
   const duplicated = store.edges.some(
-    (item) =>
-      item.source === connection.source &&
-      item.target === connection.target &&
-      (item.sourceHandle || undefined) === sourceHandle &&
-      (item.targetHandle || undefined) === targetHandle,
+    (item) => item.source === connection.source && item.target === connection.target,
   )
+  console.log('duplicated:', duplicated)
   if (duplicated) return
 
   const edge = {
@@ -611,7 +607,7 @@ const onDrop = (event: DragEvent) => {
   const step = store.nodes.filter((n) => n.type === nodeObj.type).length
 
   const newNode = {
-    id: step ? `${nodeObj.type}_${step}` : `${nodeObj.type}`,
+    id: step ? `${nodeObj.name}_${step}` : `${nodeObj.name}`,
     type: nodeObj.type,
     name: step ? `${nodeObj.name}_${step}` : nodeObj.name,
     position,
@@ -912,7 +908,7 @@ const handleComponentSelect = (componentType: string) => {
   console.log('allNodes-step:', step, store.nodes)
 
   const newNode = {
-    id: step ? `${nodeObj.type}_${step}` : `${nodeObj.type}`,
+    id: step ? `${nodeObj.name}_${step}` : `${nodeObj.name}`,
     type: nodeObj.type,
     name: step ? `${nodeObj.name}_${step}` : nodeObj.name,
     position: newPosition,
