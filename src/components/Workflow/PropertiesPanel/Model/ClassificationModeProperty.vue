@@ -122,12 +122,14 @@
             失败标签 <span class="text-red-500">*</span>
           </label>
           <el-select
+            multiple
             v-model="data.fail_labels"
             size="default"
             class="flex-1"
             filterable
             clearable
             placeholder="请选择失败标签"
+            @change="onFailLabelsChange"
           >
             <el-option
               v-for="version in data.labels"
@@ -198,7 +200,7 @@
               </el-select>
             </div>
 
-            <div class="flex items-center gap-4">
+            <!-- <div class="flex items-center gap-4">
               <label class="block text-xs font-medium text-slate-700">
                 推理设备 <span class="text-red-500">*</span>
               </label>
@@ -216,7 +218,7 @@
                   :value="device.value"
                 />
               </el-select>
-            </div>
+            </div> -->
 
             <div>
               <label class="mb-2 block text-xs font-medium text-slate-700"> 置信度阈值 </label>
@@ -381,8 +383,8 @@ interface Property {
   device?: string
   confidence_threshold?: number
   top_k?: number
-  labels: string[] | undefined
-  fail_labels?: string
+  labels: string[]
+  fail_labels: string[]
 }
 
 const props = defineProps<{
@@ -405,11 +407,11 @@ const defaultData = (): Property => ({
   is_latest: 1, //是否选择最新版本(0:否 1:是)
   model_version_id: undefined,
   model_version_name: undefined,
-  device: undefined,
+  device: 'cuda',
   confidence_threshold: 0.5,
   top_k: 5,
   labels: [],
-  fail_labels: undefined,
+  fail_labels: [],
 })
 
 const data = ref<Property>(defaultData())
@@ -436,7 +438,7 @@ const selectedModelInfo = computed(() => {
 
 const selectedModelVersions = computed(() => selectedModelInfo.value?.children || [])
 
-const deviceOptions = ref<{ label: string; value: string }[]>([])
+// const deviceOptions = ref<{ label: string; value: string }[]>([])
 // 同步模型字段
 // autoChooseVersion: 是否自动选择最新版本
 const syncModelFields = (autoChooseVersion = false) => {
@@ -448,8 +450,14 @@ const syncModelFields = (autoChooseVersion = false) => {
   }
 
   data.value.model_name = selectedModelInfo.value.name
-  data.value.labels = selectedModelInfo.value.labels
-  data.value.fail_labels = selectedModelInfo.value.labels ? selectedModelInfo.value.labels[0] : ''
+  data.value.labels = selectedModelInfo.value.labels || []
+  if (data.value.fail_labels.length === 0) {
+    if (data.value.labels[0] !== undefined) {
+      data.value.fail_labels = [data.value.labels[0]]
+    } else {
+      data.value.fail_labels = []
+    }
+  }
 
   const versions = selectedModelVersions.value
   const activeVersion =
@@ -484,10 +492,13 @@ const clearSelectedImage = () => {
 }
 
 const onModelSelect = () => {
+  data.value.fail_labels = []
   syncModelFields(true)
   updateConfig()
 }
-
+const onFailLabelsChange = () => {
+  updateConfig()
+}
 const onLatestChange = () => {
   syncModelFields(true)
   updateConfig()
@@ -547,6 +558,7 @@ const initializeData = () => {
     ...defaultData(),
     ...nextValue,
   }
+  console.log('的说法是fail_labels', data.value.fail_labels)
 }
 const type: Record<string, string> = {
   'detection_model@v1': 'detection',
@@ -567,7 +579,7 @@ const getModelList = async () => {
         id: item.modelRepositoryId,
         name: item.modelName,
         description: item.apiDescription,
-        labels: item.labelName || [],
+        labels: item.labelName,
         children:
           item.modelServiceList?.map((service: any) => ({
             id: service.modelVersionId,
@@ -591,20 +603,20 @@ const getModelList = async () => {
   }
 }
 
-const getGpu = async () => {
-  try {
-    const res = await getGpuInfo()
-    deviceOptions.value =
-      res?.data?.gpus?.map((item: any) => ({
-        label: item.name,
-        value: item.name,
-      })) || []
-    data.value.device = deviceOptions.value?.[0]?.value || undefined
-  } catch {
-    data.value.device = undefined
-    deviceOptions.value = []
-  }
-}
+// const getGpu = async () => {
+//   try {
+//     const res = await getGpuInfo()
+//     deviceOptions.value =
+//       res?.data?.gpus?.map((item: any) => ({
+//         label: item.name,
+//         value: item.name,
+//       })) || []
+//     data.value.device = deviceOptions.value?.[0]?.value || undefined
+//   } catch {
+//     data.value.device = undefined
+//     deviceOptions.value = []
+//   }
+// }
 
 watch(
   () => props.modelValue,
@@ -627,7 +639,7 @@ watch(
 )
 
 onMounted(async () => {
-  await getGpu()
+  // await getGpu()
   await getModelList()
 })
 </script>
