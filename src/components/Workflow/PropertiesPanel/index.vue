@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[90vh] flex flex-col bg-white rounded-lg">
+  <div class="flex flex-col bg-white rounded-lg">
     <div class="flex items-center justify-between p-4 border-b border-gray-200">
       <div class="flex items-center justify-center gap-2">
         <div
@@ -19,7 +19,7 @@
         class="text-slate-500 cursor-pointer hover:bg-gray-100 p-1 rounded-full"
       />
     </div>
-    <el-scrollbar>
+    <el-scrollbar max-height="calc(100vh - 200px)">
       <div class="flex-1 overflow-y-auto p-4" v-if="currentNode">
         <p class="text-xs text-gray-500 mb-2">提示：在画布上编辑的内容会实时自动保存。</p>
         <div
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw } from 'vue'
+import { computed, markRaw, onUnmounted } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useWorkflowStore } from '@/stores/workflow'
 import ClassificationModeProperty from './Model/ClassificationModeProperty.vue'
@@ -94,4 +94,10 @@ const updateNodeConfig = (newConfig: any) => {
     store.updateNode(currentNode.value.id, newConfig)
   }
 }
+
+onUnmounted(() => {
+  if (store.selectedNode) {
+    store.setSelectedNode(null)
+  }
+})
 </script>

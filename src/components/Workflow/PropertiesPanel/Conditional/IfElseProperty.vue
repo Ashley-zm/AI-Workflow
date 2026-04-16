@@ -61,14 +61,25 @@
           <div class="h-4 w-0.5 rounded-full bg-slate-500"></div>
           <h3 class="text-sm font-semibold text-slate-800">JSON 预览</h3>
         </div>
-        <button
-          class="text-xs text-blue-500 hover:text-blue-700 transition-colors"
-          @click="copyJson"
-        >
-          复制 JSON
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            class="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            @click="isJsonPreviewCollapsed = !isJsonPreviewCollapsed"
+          >
+            {{ isJsonPreviewCollapsed ? '展开' : '收起' }}
+          </button>
+          <button
+            class="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+            @click="copyJson"
+          >
+            复制 JSON
+          </button>
+        </div>
       </div>
-      <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
+      <div
+        v-show="!isJsonPreviewCollapsed"
+        class="rounded-lg bg-slate-900 p-4 border border-slate-700"
+      >
         <pre class="text-xs text-slate-100 font-mono whitespace-pre-wrap">{{
           JSON.stringify(config, null, 2)
         }}</pre>
@@ -103,6 +114,7 @@ const getDefaultConfig = () => {
 }
 
 const config = ref<Record<string, any>>(getDefaultConfig())
+const isJsonPreviewCollapsed = ref(true)
 
 const normalizeConfig = (value: unknown) => {
   const defaultConfig = getDefaultConfig()

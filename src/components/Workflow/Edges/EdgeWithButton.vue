@@ -89,5 +89,6 @@ const isButtonHovered = ref(false)
 const labelVisible = computed(() => isEdgeHovered.value || isButtonHovered.value)
 const handleClickRemove = () => {
   store.removeEdge(props.id)
+  store.setSelectedNode(null)
 }
 </script>

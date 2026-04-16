@@ -123,9 +123,10 @@ const store = useWorkflowStore()
 const props = defineProps<{
   id: string
   data: any
-  selected?: boolean
+  // selected?: boolean
   type: string
 }>()
+const selected = computed(() => store.selectedNode?.id === props.id)
 
 const nodeType = computed(() => getNodeType(props.type))
 const properties = computed(() => {

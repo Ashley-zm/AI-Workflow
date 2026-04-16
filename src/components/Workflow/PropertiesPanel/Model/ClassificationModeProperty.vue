@@ -137,94 +137,120 @@
             />
           </el-select>
         </div>
-        <div class="flex items-center gap-4">
-          <label class="block text-xs font-medium text-slate-700">
-            是否选择最新版本 <span class="text-red-500">*</span>
-          </label>
-          <el-switch
-            v-model="data.is_latest"
-            :active-value="1"
-            :inactive-value="0"
-            class="flex-1"
-            active-color="#13ce66"
-            inactive-color="#ff4949"
-            @change="onLatestChange"
-          />
-        </div>
 
-        <div v-if="data.is_latest === 0" class="flex items-center gap-4">
-          <label class="block text-xs font-medium text-slate-700">
-            模型版本 <span class="text-red-500">*</span>
-          </label>
-          <el-select
-            v-model="data.model_version_id"
-            size="default"
-            class="flex-1"
-            filterable
-            clearable
-            placeholder="请选择模型版本"
-            @change="onVersionSelect"
+        <div class="rounded-lg border border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between px-3 py-2.5 text-left transition-colors hover:bg-slate-100"
+            @click="showAdvancedConfig = !showAdvancedConfig"
           >
-            <el-option
-              v-for="version in selectedModelVersions"
-              :key="version.id"
-              :label="version.name"
-              :value="version.id"
-            />
-          </el-select>
-        </div>
+            <div>
+              <div class="text-xs font-medium text-slate-700">更多配置</div>
+            </div>
+            <div class="flex items-center gap-1 text-xs text-slate-500">
+              <span>{{ showAdvancedConfig ? '收起' : '展开' }}</span>
+              <ChevronDown
+                :size="14"
+                class="transition-transform"
+                :class="{ 'rotate-180': showAdvancedConfig }"
+              />
+            </div>
+          </button>
 
-        <div class="flex items-center gap-4">
-          <label class="block text-xs font-medium text-slate-700">
-            推理设备 <span class="text-red-500">*</span>
-          </label>
-          <el-select
-            v-model="data.device"
-            size="default"
-            class="flex-1"
-            placeholder="请选择设备类型"
-            @change="updateConfig"
+          <div
+            v-show="showAdvancedConfig"
+            class="space-y-4 border-t border-slate-200 bg-white px-3 pb-3 pt-3"
           >
-            <el-option
-              v-for="device in deviceOptions"
-              :key="device.value"
-              :label="device.label"
-              :value="device.value"
-            />
-          </el-select>
-        </div>
+            <div class="flex items-center gap-4">
+              <label class="block text-xs font-medium text-slate-700">
+                是否选择最新版本 <span class="text-red-500">*</span>
+              </label>
+              <el-switch
+                v-model="data.is_latest"
+                :active-value="1"
+                :inactive-value="0"
+                class="flex-1"
+                active-color="#13ce66"
+                inactive-color="#ff4949"
+                @change="onLatestChange"
+              />
+            </div>
 
-        <div>
-          <label class="mb-2 block text-xs font-medium text-slate-700"> 置信度阈值 </label>
-          <div class="flex items-center gap-3">
-            <el-slider
-              v-model="data.confidence_threshold"
-              :min="0"
-              :max="1"
-              :step="0.01"
-              class="flex-1"
-              @change="updateConfig"
-            />
-            <span class="w-16 text-right text-xs text-slate-500">
-              {{ Number(data.confidence_threshold ?? 0).toFixed(2) }}
-            </span>
-          </div>
-        </div>
+            <div v-if="data.is_latest === 0" class="flex items-center gap-4">
+              <label class="block text-xs font-medium text-slate-700">
+                模型版本 <span class="text-red-500">*</span>
+              </label>
+              <el-select
+                v-model="data.model_version_id"
+                size="default"
+                class="flex-1"
+                filterable
+                clearable
+                placeholder="请选择模型版本"
+                @change="onVersionSelect"
+              >
+                <el-option
+                  v-for="version in selectedModelVersions"
+                  :key="version.id"
+                  :label="version.name"
+                  :value="version.id"
+                />
+              </el-select>
+            </div>
 
-        <div>
-          <label class="mb-2 block text-xs font-medium text-slate-700">Top-K预测</label>
-          <div class="flex items-center gap-3">
-            <el-slider
-              v-model="data.top_k"
-              :min="0"
-              :max="10"
-              :step="1"
-              class="flex-1"
-              @change="updateConfig"
-            />
-            <span class="w-16 text-right text-xs text-slate-500">
-              {{ Number(data.top_k ?? 5) }}
-            </span>
+            <div class="flex items-center gap-4">
+              <label class="block text-xs font-medium text-slate-700">
+                推理设备 <span class="text-red-500">*</span>
+              </label>
+              <el-select
+                v-model="data.device"
+                size="default"
+                class="flex-1"
+                placeholder="请选择设备类型"
+                @change="updateConfig"
+              >
+                <el-option
+                  v-for="device in deviceOptions"
+                  :key="device.value"
+                  :label="device.label"
+                  :value="device.value"
+                />
+              </el-select>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-xs font-medium text-slate-700"> 置信度阈值 </label>
+              <div class="flex items-center gap-3">
+                <el-slider
+                  v-model="data.confidence_threshold"
+                  :min="0"
+                  :max="1"
+                  :step="0.01"
+                  class="flex-1"
+                  @change="updateConfig"
+                />
+                <span class="w-16 text-right text-xs text-slate-500">
+                  {{ Number(data.confidence_threshold ?? 0).toFixed(2) }}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-xs font-medium text-slate-700">Top-K预测</label>
+              <div class="flex items-center gap-3">
+                <el-slider
+                  v-model="data.top_k"
+                  :min="0"
+                  :max="10"
+                  :step="1"
+                  class="flex-1"
+                  @change="updateConfig"
+                />
+                <span class="w-16 text-right text-xs text-slate-500">
+                  {{ Number(data.top_k ?? 5) }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -236,14 +262,25 @@
           <div class="h-4 w-0.5 rounded-full bg-slate-500"></div>
           <h3 class="text-sm font-semibold text-slate-800">JSON预览</h3>
         </div>
-        <button
-          class="text-xs text-blue-500 transition-colors hover:text-blue-700"
-          @click="copyJson"
-        >
-          复制JSON
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            class="text-xs text-slate-500 transition-colors hover:text-slate-700"
+            @click="isJsonPreviewCollapsed = !isJsonPreviewCollapsed"
+          >
+            {{ isJsonPreviewCollapsed ? '展开' : '收起' }}
+          </button>
+          <button
+            class="text-xs text-blue-500 transition-colors hover:text-blue-700"
+            @click="copyJson"
+          >
+            复制JSON
+          </button>
+        </div>
       </div>
-      <div class="rounded-lg border border-slate-700 bg-slate-900 p-4">
+      <div
+        v-show="!isJsonPreviewCollapsed"
+        class="rounded-lg border border-slate-700 bg-slate-900 p-4"
+      >
         <pre class="whitespace-pre-wrap font-mono text-xs text-slate-100">{{
           JSON.stringify(data, null, 2)
         }}</pre>
@@ -317,7 +354,7 @@ import { useWorkflowStore } from '@/stores/workflow'
 import { Picture, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getNodeTypeIcon, getNodeTypeLabel } from '@/components/Workflow/config/nodeConfig'
-import { X, Zap, AlertCircle, CheckCircle, Brain, Image } from 'lucide-vue-next'
+import { X, Zap, AlertCircle, CheckCircle, Brain, Image, ChevronDown } from 'lucide-vue-next'
 import { getModelServiceList, getGpuInfo } from '@/api/workflow'
 
 interface ModelVersionOption {
@@ -376,9 +413,11 @@ const defaultData = (): Property => ({
 })
 
 const data = ref<Property>(defaultData())
+const isJsonPreviewCollapsed = ref(true)
+const showAdvancedConfig = ref(false)
 
 const availableImageNodes = computed(() => {
-  const imageNodes = store.nodes
+  return store.nodes
     .filter((node) => {
       const nodeProperties = node.data
       if (!nodeProperties || !Array.isArray(nodeProperties)) return false
@@ -389,12 +428,6 @@ const availableImageNodes = computed(() => {
       type: node.type,
       imageProperties: (node.data as any[]).filter((prop: any) => prop.type === 'image'),
     }))
-  if (imageNodes && imageNodes.length > 0) {
-    selectImageProperty(imageNodes[0], imageNodes?.[0]?.imageProperties?.[0])
-  } else {
-    clearSelectedImage()
-  }
-  return imageNodes
 })
 
 const selectedModelInfo = computed(() => {
@@ -437,6 +470,7 @@ const updateConfig = () => {
 }
 
 const selectImageProperty = (node: any, property: any) => {
+  if (!node?.id || !property?.name) return
   data.value.images = `$${node.id}.${property.name}`
   showImageSelectionDialog.value = false
   updateConfig()
@@ -446,7 +480,7 @@ const selectImageProperty = (node: any, property: any) => {
 const clearSelectedImage = () => {
   data.value.images = undefined
   updateConfig()
-  ElMessage.info('已清空选中的图片属性')
+  // ElMessage.info('已清空选中的图片属性')
 }
 
 const onModelSelect = () => {
@@ -508,7 +542,11 @@ const copyJson = async () => {
 }
 
 const initializeData = () => {
-  data.value = props.modelValue || defaultData()
+  const nextValue = props.modelValue ? JSON.parse(JSON.stringify(props.modelValue)) : {}
+  data.value = {
+    ...defaultData(),
+    ...nextValue,
+  }
 }
 const type: Record<string, string> = {
   'detection_model@v1': 'detection',
@@ -570,13 +608,28 @@ const getGpu = async () => {
 
 watch(
   () => props.modelValue,
-  async () => {
+  () => {
     initializeData()
-    await getGpu()
-    await getModelList()
   },
   { deep: true, immediate: true },
 )
+
+watch(
+  availableImageNodes,
+  (nodes) => {
+    if (data.value.images || nodes.length === 0) return
+    const firstNode = nodes[0]
+    const firstImageProperty = firstNode?.imageProperties?.[0]
+    if (!firstNode || !firstImageProperty) return
+    selectImageProperty(firstNode, firstImageProperty)
+  },
+  { deep: true, immediate: true },
+)
+
+onMounted(async () => {
+  await getGpu()
+  await getModelList()
+})
 </script>
 
 <style>

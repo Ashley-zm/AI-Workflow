@@ -11,6 +11,7 @@
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
           <el-select v-model="groupFilter" class="min-w-[150px]" placeholder="请选择分组">
             <el-option label="全部分组" value="all" />
+            <el-option label="未分组" value="others" />
             <el-option
               v-for="group in groupOptions"
               :key="group.id"
@@ -91,120 +92,130 @@
 
       <el-empty
         class="w-full h-full"
-        v-if="viewMode === 'card' && workflowItems.length === 0"
+        v-if="viewMode === 'card' && workflowItems.length === 0 && !workflowLoading"
         description="暂无工作流"
       >
       </el-empty>
-      <section
-        v-loading="workflowLoading"
+      <el-scrollbar
+        ref="gridScrollbarRef"
         v-if="viewMode === 'card'"
-        class="grid gap-3 sm:grid-cols-3 xl:grid-cols-4"
+        max-height="calc(100vh - 135px)"
+        :distance="100"
+        @end-reached="loadMore"
+        @scroll="onGridScroll"
       >
-        <article
-          v-for="item in workflowItems"
-          :key="item.id"
-          class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <button
-            type="button"
-            class="block w-full cursor-pointer text-left"
-            @click="openEditor(item.id)"
+        <section v-loading="workflowLoading" class="grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <article
+            v-for="item in workflowItems"
+            :key="item.id"
+            class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div class="flex h-40 items-center justify-center bg-slate-50 p-4">
-              <div class="preview-flow">
-                <div class="preview-node"></div>
-                <div class="preview-line"></div>
-                <div class="preview-node"></div>
-                <div class="preview-line"></div>
-                <div class="preview-node"></div>
-                <div class="preview-line"></div>
-                <div class="preview-node"></div>
-              </div>
-            </div>
-            <div class="space-y-2 border-t border-slate-100 p-4">
-              <div class="flex items-center gap-2">
-                <span class="line-clamp-1 text-[14px] font-bold text-slate-700">
-                  {{ item.workflowName }}
-                </span>
-                <el-tag type="primary" v-if="item.groupLabel != '未分组'">
-                  {{ item.groupLabel }}
-                </el-tag>
-              </div>
-              <p class="inline-flex items-center gap-1 text-xs text-slate-500">
-                <span
-                  class="inline-flex items-center gap-1 text-xs text-slate-500 border border-slate-200 rounded-md px-2 py-1.5"
-                  v-for="tag in item.workflowClass.split(',')"
-                  :key="tag"
-                >
-                  <Tag :size="12" />
-                  {{ tag }}
-                </span>
-              </p>
-              <p class="line-clamp-1 text-xs text-slate-600">{{ item.description || '-' }}</p>
-            </div>
-          </button>
-
-          <div class="absolute right-2 top-2">
-            <el-dropdown
-              trigger="click"
-              :visible="activeActionMenuKey === `card-${item.id}`"
-              @visible-change="onCardActionMenuVisibleChange(item.id, $event)"
-              @command="onCardCommand($event, item)"
+            <button
+              type="button"
+              class="block w-full cursor-pointer text-left"
+              @click="openEditor(item.id)"
             >
-              <button
-                type="button"
-                class="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                @click.stop
+              <div class="flex h-40 items-center justify-center bg-slate-50 p-4">
+                <div class="preview-flow">
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                </div>
+              </div>
+              <div class="space-y-2 border-t border-slate-100 p-4">
+                <div class="flex items-center gap-2">
+                  <span class="line-clamp-1 text-[14px] font-bold text-slate-700">
+                    {{ item.workflowName }}
+                  </span>
+                  <el-tag type="primary" v-if="item.groupLabel != '未分组'">
+                    {{ item.groupLabel }}
+                  </el-tag>
+                </div>
+                <p class="inline-flex items-center gap-1 text-xs text-slate-500">
+                  <span
+                    class="inline-flex items-center gap-1 text-xs text-slate-500 border border-slate-200 rounded-md px-2 py-1.5"
+                    v-for="tag in item.workflowClass.split(',')"
+                    :key="tag"
+                  >
+                    <Tag :size="12" />
+                    {{ tag }}
+                  </span>
+                </p>
+                <p class="line-clamp-1 text-xs text-slate-600">{{ item.description || '-' }}</p>
+              </div>
+            </button>
+
+            <div class="absolute right-2 top-2">
+              <el-dropdown
+                trigger="click"
+                :visible="activeActionMenuKey === `card-${item.id}`"
+                @visible-change="onCardActionMenuVisibleChange(item.id, $event)"
+                @command="onCardCommand($event, item)"
               >
-                <EllipsisVertical :size="16" />
-              </button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit"> 编辑 </el-dropdown-item>
-                  <el-dropdown-item command="copy"> 复制 </el-dropdown-item>
-                  <el-dropdown-item class="move-group-dropdown-item" @click.stop>
-                    <el-popover
-                      placement="right-start"
-                      trigger="hover"
-                      :width="180"
-                      popper-class="move-group-popover"
-                      v-if="activeActionMenuKey"
-                    >
-                      <template #reference>
-                        <div class="move-group-trigger">
-                          <span>移动到分组</span>
-                          <ChevronRight :size="14" />
-                        </div>
-                      </template>
-                      <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
-                      <div v-else-if="groupOptions.length" class="move-group-list">
-                        <div
-                          v-for="group in groupOptions"
-                          :key="`move-${item.id}-${group.id}`"
-                          class="move-group-option"
-                          @click.stop="handleMoveToGroup(item, group.id)"
-                        >
-                          <span class="truncate">{{ group.groupName }}</span>
-                          <button
-                            type="button"
-                            class="move-group-delete"
-                            title="删除分组"
-                            @click.stop="handleDeleteGroup(group.id)"
+                <button
+                  type="button"
+                  class="grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                  @click.stop
+                >
+                  <EllipsisVertical :size="16" />
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="edit"> 编辑 </el-dropdown-item>
+                    <el-dropdown-item command="copy"> 复制 </el-dropdown-item>
+                    <el-dropdown-item class="move-group-dropdown-item" @click.stop>
+                      <el-popover
+                        placement="right-start"
+                        trigger="hover"
+                        :width="180"
+                        popper-class="move-group-popover"
+                        v-if="activeActionMenuKey"
+                      >
+                        <template #reference>
+                          <div class="move-group-trigger">
+                            <span>移动到分组</span>
+                            <ChevronRight :size="14" />
+                          </div>
+                        </template>
+                        <div v-if="groupLoading" class="move-group-empty">分组加载中...</div>
+                        <div v-else-if="groupOptions.length" class="move-group-list">
+                          <div
+                            v-for="group in groupOptions"
+                            :key="`move-${item.id}-${group.id}`"
+                            class="move-group-option"
+                            @click.stop="handleMoveToGroup(item, group.id)"
                           >
-                            <X :size="12" />
-                          </button>
+                            <span class="truncate">{{ group.groupName }}</span>
+                            <button
+                              type="button"
+                              class="move-group-delete"
+                              title="删除分组"
+                              @click.stop="handleDeleteGroup(group.id)"
+                            >
+                              <X :size="12" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <div v-else class="move-group-empty">暂无分组</div>
-                    </el-popover>
-                  </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided> 删除 </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </article>
-      </section>
+                        <div v-else class="move-group-empty">暂无分组</div>
+                      </el-popover>
+                    </el-dropdown-item>
+                    <el-dropdown-item command="delete" divided> 删除 </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
+          </article>
+        </section>
+        <div v-if="workflowItems.length > 0" class="grid-load-footer">
+          <p v-if="gridLoadMoreLoading" class="grid-load-hint is-loading">加载中...</p>
+          <p v-else-if="!gridHasMore" class="grid-load-hint">没有更多数据了</p>
+          <p v-else class="grid-load-hint">滚动到底部加载更多</p>
+        </div>
+      </el-scrollbar>
 
       <section v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <el-table
@@ -383,10 +394,15 @@ const pageSize = ref(20)
 const total = ref(0)
 
 const workflowLoading = ref(false)
+const gridLoadMoreLoading = ref(false)
+const gridHasMore = ref(true)
 const groupLoading = ref(false)
 const activeActionMenuKey = ref('')
 const workflows = ref<WorkflowEntity[]>([])
 const groups = ref<GroupOption[]>([])
+const gridScrollbarRef = ref<{ wrapRef?: HTMLElement } | null>(null)
+
+const GRID_LOAD_TRIGGER_DISTANCE = 120
 
 const groupOptions = computed(() => groups.value)
 
@@ -402,9 +418,6 @@ const defaultCreateTag = computed(() => {
 const workflowItems = computed<WorkflowViewItem[]>(() => {
   return workflows.value.map((item) => {
     const groupId = item.workflowGroup !== undefined ? String(item.workflowGroup) : ''
-    console.log('groupMap', groupMap.value)
-    console.log(groupId)
-
     const groupLabel = groupMap.value.get(groupId) || '未分组'
     return {
       ...item,
@@ -416,29 +429,78 @@ const workflowItems = computed<WorkflowViewItem[]>(() => {
   })
 })
 
-const fetchWorkflowList = async () => {
-  workflowLoading.value = true
+const loadMore = async () => {
+  if (viewMode.value !== 'card') return
+  if (workflowLoading.value || gridLoadMoreLoading.value || !gridHasMore.value) return
+
+  pageNum.value += 1
+  const loaded = await fetchWorkflowList({ append: true })
+  if (!loaded) {
+    pageNum.value = Math.max(1, pageNum.value - 1)
+  }
+}
+
+const onGridScroll = () => {
+  if (viewMode.value !== 'card') return
+  if (workflowLoading.value || gridLoadMoreLoading.value || !gridHasMore.value) return
+
+  const wrapEl = gridScrollbarRef.value?.wrapRef
+  if (!wrapEl || wrapEl.scrollHeight <= wrapEl.clientHeight) return
+
+  const distanceToBottom = wrapEl.scrollHeight - (wrapEl.scrollTop + wrapEl.clientHeight)
+  if (distanceToBottom <= GRID_LOAD_TRIGGER_DISTANCE) {
+    void loadMore()
+  }
+}
+
+const fetchWorkflowList = async ({ append = false }: { append?: boolean } = {}) => {
+  const isCardAppend = append && viewMode.value === 'card'
+
+  if (!isCardAppend && viewMode.value === 'card' && pageNum.value > 1) {
+    pageNum.value = 1
+  }
+
+  if (isCardAppend) {
+    gridLoadMoreLoading.value = true
+  } else {
+    workflowLoading.value = true
+    if (viewMode.value === 'card' && pageNum.value === 1) {
+      gridHasMore.value = true
+    }
+  }
+
   try {
     const query: WorkflowListQuery = {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
     }
     if (keyword.value) query.keyword = keyword.value
+    console.log('groupFilter.value', groupFilter.value)
+
     if (groupFilter.value !== 'all') query.groupId = groupFilter.value
 
     const response = await workflowApi.getWorkflowList(query)
     if (response.code !== 200) {
       ElMessage.error(response.msg || '加载工作流失败')
-      return
+      return false
     }
+
+    const incomingRows = response.rows || []
     total.value = response.total || 0
 
-    workflows.value = response.rows || []
+    workflows.value = isCardAppend ? [...workflows.value, ...incomingRows] : incomingRows
+    gridHasMore.value = workflows.value.length < total.value
+    return true
   } catch (error) {
     console.error(error)
     ElMessage.error('加载工作流失败，请稍后重试')
+    return false
   } finally {
-    workflowLoading.value = false
+    if (isCardAppend) {
+      gridLoadMoreLoading.value = false
+    } else {
+      workflowLoading.value = false
+    }
   }
 }
 
@@ -660,6 +722,13 @@ watch([keyword, groupFilter], () => {
   }, 300)
 })
 
+watch(viewMode, async (mode) => {
+  if (mode !== 'card') return
+  if (pageNum.value === 1) return
+  pageNum.value = 1
+  await fetchWorkflowList()
+})
+
 onMounted(async () => {
   await Promise.all([fetchGroups(), fetchWorkflowList()])
 })
@@ -785,6 +854,38 @@ onUnmounted(() => {
   color: #94a3b8;
   font-size: 12px;
   padding: 6px 8px;
+}
+
+.grid-load-footer {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 18px;
+}
+
+.grid-load-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.grid-load-hint.is-loading::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #3b82f6;
+  animation: grid-load-spin 0.8s linear infinite;
+}
+
+@keyframes grid-load-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 :deep(.workflow-table .el-table__cell) {

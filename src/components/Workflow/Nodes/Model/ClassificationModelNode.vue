@@ -125,12 +125,11 @@ const store = useWorkflowStore()
 const props = defineProps<{
   id: string
   data: any
-  selected?: boolean
   type: string
 }>()
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
-
+const selected = computed(() => store.selectedNode?.id === props.id)
 const deleteNode = () => {
   store.removeNode(props.id)
   store.setSelectedNode(null)

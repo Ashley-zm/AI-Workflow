@@ -31,13 +31,16 @@ import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
+import { useWorkflowStore } from '@/stores/workflow'
 
+const store = useWorkflowStore()
 const props = defineProps<{
   id: string
   data: any
-  selected?: boolean
+  // selected?: boolean
   type: string
 }>()
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
+const selected = computed(() => store.selectedNode?.id === props.id)
 </script>

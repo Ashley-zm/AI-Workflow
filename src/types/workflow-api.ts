@@ -42,7 +42,7 @@ export interface AddOrUpdateWorkflowRequest {
 // 工作流列表查询参数
 export interface WorkflowListQuery {
   keyword?: string
-  groupId?: string
+  groupId?: string | number | null
   pageNum?: number
   pageSize?: number
 }

@@ -377,8 +377,28 @@ const NODE_VERTICAL_GAP = 60
 const NODE_COLUMN_STEP = NODE_WIDTH + NODE_HORIZONTAL_GAP
 const NODE_ROW_STEP = NODE_HEIGHT + NODE_VERTICAL_GAP
 
+const requestFullscreenSafely = async () => {
+  if (typeof document === 'undefined') return
+  if (document.fullscreenElement) return
+  try {
+    await document.documentElement.requestFullscreen()
+  } catch (error) {
+    console.warn('Request fullscreen failed:', error)
+  }
+}
+
+const exitFullscreenSafely = async () => {
+  if (typeof document === 'undefined') return
+  if (!document.fullscreenElement) return
+  try {
+    await document.exitFullscreen()
+  } catch (error) {
+    console.warn('Exit fullscreen failed:', error)
+  }
+}
+
 const handleBackClick = async () => {
-  document.exitFullscreen()
+  await exitFullscreenSafely()
   if (window.history.length > 1) {
     await router.back()
     return
@@ -524,6 +544,9 @@ onConnect((connection) => {
   const duplicated = store.edges.some(
     (item) => item.source === connection.source && item.target === connection.target,
   )
+  if (connection.target === 'outputs') {
+    store.setSelectedNode(connection.target)
+  }
   console.log('duplicated:', duplicated)
   if (duplicated) return
 
@@ -537,7 +560,7 @@ onConnect((connection) => {
   store.addEdge(edge)
 })
 onMounted(() => {
-  document.documentElement.requestFullscreen()
+  void requestFullscreenSafely()
   window.addEventListener('keydown', handleKeyDown)
   onInit((vueFlowInstance) => {
     isFlowReady.value = true
@@ -549,14 +572,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
-  document.exitFullscreen()
   store.nodes = store.nodes.map((node) => ({
     ...node,
-    selected: false,
+    // selected: false,
   })) as Node[]
   store.setSelectedNode(null)
   store.clearCurrentHandleInfo()
   componentLibraryModal.value?.close()
+  void exitFullscreenSafely()
 })
 
 watch(

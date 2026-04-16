@@ -135,12 +135,13 @@ const store = useWorkflowStore()
 const props = defineProps<{
   id: string
   data: Array<Property>
-  selected?: boolean
+  // selected?: boolean
   type: string
 }>()
 
 const nodeType = computed(() => getNodeType(props.type))
 const nodeColor = computed(() => nodeType.value?.color || 'blue')
+const selected = computed(() => store.selectedNode?.id === props.id)
 
 const data = ref<Property[]>([])
 

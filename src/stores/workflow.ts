@@ -193,6 +193,42 @@ export const useWorkflowStore = defineStore('workflow', () => {
     return changed ? { nextValue: nextObject, changed: true } : { nextValue: value, changed: false }
   }
 
+  const replaceImageSelectorFieldsInValue = (
+    value: unknown,
+    imageSelector: string,
+  ): { nextValue: unknown; changed: boolean } => {
+    if (Array.isArray(value)) {
+      let changed = false
+      const nextArray = value.map((item) => {
+        const result = replaceImageSelectorFieldsInValue(item, imageSelector)
+        if (result.changed) changed = true
+        return result.nextValue
+      })
+      return changed
+        ? { nextValue: nextArray, changed: true }
+        : { nextValue: value, changed: false }
+    }
+
+    if (!value || typeof value !== 'object') {
+      return { nextValue: value, changed: false }
+    }
+
+    let changed = false
+    const nextObject: Record<string, unknown> = {}
+    Object.entries(value as Record<string, unknown>).forEach(([key, rawValue]) => {
+      if (key === 'image' || key === 'images') {
+        nextObject[key] = imageSelector
+        if (rawValue !== imageSelector) changed = true
+        return
+      }
+      const result = replaceImageSelectorFieldsInValue(rawValue, imageSelector)
+      if (result.changed) changed = true
+      nextObject[key] = result.nextValue
+    })
+
+    return changed ? { nextValue: nextObject, changed: true } : { nextValue: value, changed: false }
+  }
+
   const applyReferenceUpdatesToOtherNodes = (params: {
     exactMap?: Map<string, RefReplacementValue>
     clearPrefixes?: string[]
@@ -222,8 +258,49 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   const updateAllData = (currentNode: Node, previousData: unknown, nextData: unknown) => {
-    console.log('updateAllData', currentNode, previousData, nextData)
     const nodeId = String(currentNode.id ?? '')
+    const previousIsEmpty = Array.isArray(previousData) && previousData.length === 0
+    const nextImageNames = Array.isArray(nextData)
+      ? nextData
+          .filter((item: any) => item?.type === 'image')
+          .map((item: any) => normalizeName(item?.name))
+          .filter((name: string) => name.length > 0)
+      : []
+
+    // inputs 从空变为有值，且含 image 类型时，回填非 outputs 节点的 image/images 字段
+    if (previousIsEmpty && nextImageNames.length > 0) {
+      const defaultImageSelector = `$inputs.${nextImageNames[0]}`
+      let changed = false
+
+      nodes.value = nodes.value.map((node) => {
+        if (String(node.id) === nodeId) return node
+        if (String(node.type ?? '') === 'outputs') return node
+
+        const replaced = replaceImageSelectorFieldsInValue(node.data, defaultImageSelector)
+        if (!replaced.changed) return node
+        changed = true
+        return {
+          ...node,
+          data: replaced.nextValue as any,
+        } as Node
+      })
+
+      if (changed && selectedNode.value?.id) {
+        selectedNode.value = nodes.value.find((node) => node.id === selectedNode.value?.id) || null
+      }
+    }
+
+    const nextNames = extractNameListFromNodeData(nextData)
+
+    // inputs 为空时，清空所有节点里对 $inputs.xxx 的引用
+    if (nextNames.length === 0) {
+      applyReferenceUpdatesToOtherNodes({
+        clearPrefixes: ['$inputs.'],
+        excludeNodeId: nodeId,
+      })
+      return
+    }
+
     const nameReplacements = buildNameReplacementMap(previousData, nextData)
     if (nameReplacements.size === 0) return
 
@@ -633,7 +710,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
   // 更新节点数据
   const updateNode = (nodeId: string, data: any) => {
     const nodeIndex = nodes.value.findIndex((n) => n.id === nodeId)
-    console.log('有吗:', nodeIndex, nodeId, selectedNode.value?.id)
 
     if (nodeIndex === -1) return
 
@@ -785,7 +861,8 @@ export const useWorkflowStore = defineStore('workflow', () => {
           type: 'output@v1',
           ui_position: item.position,
           name: item.name,
-          outputs: item.data,
+          // outputs 是一个数组，每个元素是一个对象，包含 name type selector,过滤掉name\type\selector不存在的数据
+          outputs: item.data.filter((output: any) => output.name && output.type && output.selector),
         })),
       edges: edges.value.map((item) => ({
         id: item.id,

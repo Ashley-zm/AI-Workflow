@@ -227,6 +227,12 @@
             <h3 class="text-sm font-semibold text-slate-800">JSON预览</h3>
           </div>
           <div class="flex items-center gap-2">
+            <button
+              class="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              @click="isJsonPreviewCollapsed = !isJsonPreviewCollapsed"
+            >
+              {{ isJsonPreviewCollapsed ? '展开' : '收起' }}
+            </button>
             <el-button
               v-if="sourceNodes"
               size="small"
@@ -240,49 +246,51 @@
           </div>
         </div>
         <!-- JSON预览 -->
-        <div v-if="outputNodes" class="space-y-3">
-          <div
-            class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden hover:border-purple-300 transition-all hover:shadow-md"
-          >
-            <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-slate-400">节点 / 边 JSON 数据预览</span>
-                <div class="flex items-center gap-1">
-                  <button
-                    class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    @click="copyOutputData"
-                  >
-                    <Copy :size="12" class="mr-1" />
-                    复制
-                  </button>
-                  <button
-                    class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    @click="downloadOutputData"
-                  >
-                    <Download :size="12" class="mr-1" />
-                    下载
-                  </button>
+        <div v-show="!isJsonPreviewCollapsed">
+          <div v-if="outputNodes" class="space-y-3">
+            <div
+              class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden hover:border-purple-300 transition-all hover:shadow-md"
+            >
+              <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-medium text-slate-400">节点 / 边 JSON 数据预览</span>
+                  <div class="flex items-center gap-1">
+                    <button
+                      class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      @click="copyOutputData"
+                    >
+                      <Copy :size="12" class="mr-1" />
+                      复制
+                    </button>
+                    <button
+                      class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      @click="downloadOutputData"
+                    >
+                      <Download :size="12" class="mr-1" />
+                      下载
+                    </button>
+                  </div>
                 </div>
+                <pre
+                  class="text-[11px] leading-relaxed font-mono text-slate-100 overflow-x-auto whitespace-pre-wrap break-all"
+                  >{{ formattedOutputNodes }}</pre
+                >
               </div>
-              <pre
-                class="text-[11px] leading-relaxed font-mono text-slate-100 overflow-x-auto whitespace-pre-wrap break-all"
-                >{{ formattedOutputNodes }}</pre
-              >
             </div>
           </div>
-        </div>
 
-        <div
-          v-else
-          class="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-slate-50 border-2 border-dashed border-slate-300 text-center"
-        >
-          <div class="mb-4 flex justify-center">
-            <div class="rounded-full bg-slate-200 p-4">
-              <Link :size="32" class="text-slate-400" />
+          <div
+            v-else
+            class="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-slate-50 border-2 border-dashed border-slate-300 text-center"
+          >
+            <div class="mb-4 flex justify-center">
+              <div class="rounded-full bg-slate-200 p-4">
+                <Link :size="32" class="text-slate-400" />
+              </div>
             </div>
+            <p class="text-sm text-slate-600 font-medium mb-1">暂无连接</p>
+            <p class="text-xs text-slate-400">请将其他节点连接至此节点以查看数据</p>
           </div>
-          <p class="text-sm text-slate-600 font-medium mb-1">暂无连接</p>
-          <p class="text-xs text-slate-400">请将其他节点连接至此节点以查看数据</p>
         </div>
       </div>
     </div>
@@ -324,6 +332,7 @@ const emit = defineEmits<{
 
 const { findNode, edges } = useVueFlow()
 const expandedNodes = ref(new Set<string>())
+const isJsonPreviewCollapsed = ref(true)
 
 interface OutputField {
   type: 'ImageField' | 'JsonField'
@@ -387,14 +396,12 @@ const resolveFieldTypeBySelector = (selector: string): OutputField['type'] => {
 
 const getDefaultFieldNameBySelector = (selector: string, index: number) => {
   const segments = selector.split('.')
-  console.log('hguisfhuisdfhg', segments)
   if (segments.length > 2) {
     const prefix = segments[segments.length - 2]?.trim() || ''
     const lastSegment = segments[segments.length - 1]?.trim() || ''
     return `${prefix}_${lastSegment || `${index + 1}`}`
   }
   const lastSegment = segments[segments.length - 1]?.trim() || ''
-  console.log('非递归算法股市大幅改变', lastSegment)
   return lastSegment || `output_${index + 1}`
 }
 
@@ -592,8 +599,9 @@ const isSameFields = (a: OutputField[], b: OutputField[]) => {
 }
 
 const initializeOutputFields = () => {
-  const normalizedFromProps = syncOutputFieldsWithSelectableData(normalizeOutputFields(props.modelValue))
-  const initialized = mergeMissingDefaultSelectorsFromDirectSources(normalizedFromProps)
+  const normalizedFromProps = normalizeOutputFields(props.modelValue)
+  const syncedFromProps = syncOutputFieldsWithSelectableData(normalizedFromProps)
+  const initialized = mergeMissingDefaultSelectorsFromDirectSources(syncedFromProps)
   outputFields.value = initialized
 
   // 初始化若自动补齐了默认 selector，需要回写到节点 data
