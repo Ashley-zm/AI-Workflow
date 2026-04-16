@@ -17,7 +17,8 @@
     <!-- 悬浮提示 -->
     <div
       v-if="isHovered && showTooltip && type === 'source'"
-      class="absolute right-[-38px] top-[50px] transform px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-10"
+      class="absolute right-[-38px] px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-10 pointer-events-none"
+      :style="tooltipStyle"
     >
       点击添加节点
     </div>
@@ -75,6 +76,19 @@ const mergedHandleStyle = computed<Record<string, string | number>>(() => {
   }
 })
 
+const tooltipTop = computed(() => {
+  const top = handleStyle.value?.top
+  if (typeof top === 'number') return `${top}px`
+  if (typeof top === 'string' && top.trim()) return top
+  return '50%'
+})
+
+const tooltipStyle = computed<Record<string, string>>(() => ({
+  top: tooltipTop.value,
+  transform: 'translateY(-50%)',
+  marginTop: '-20px',
+}))
+
 const handleClick = (event: MouseEvent) => {
   console.log('CustomHandle点击事件:', props, event)
   if (props.type === 'target') {
@@ -93,19 +107,17 @@ const handleClick = (event: MouseEvent) => {
   border: 2px solid #cfcfcf;
   background-color: #fff;
 }
-.custom-handle:hover {
+.custom-handle:hover,
+.success-handle:hover,
+.error-handle:hover {
   border-color: #007bff;
 }
 .success-handle {
+  border: 2px solid #fff;
   background-color: #00c950;
 }
-.custom-handle.success-handle {
-  border-color: #00c950;
-}
 .error-handle {
+  border: 2px solid #fff;
   background-color: #ff4141;
-}
-.custom-handle.error-handle {
-  border-color: #ff4141;
 }
 </style>
