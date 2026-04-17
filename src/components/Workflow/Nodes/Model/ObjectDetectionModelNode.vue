@@ -19,12 +19,21 @@
           >
             <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
           </div>
-          <div class="flex flex-col">
+          <div class="flex flex-col max-w-[150px]">
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ props.id || 'Model' }}
+              {{ props.label || props.name || props.id || 'Model' }}
             </div>
-            <p class="text-xs text-gray-500 tracking-[1px]">
+            <p
+              class="text-xs text-gray-500 tracking-[1px] overflow-hidden whitespace-nowrap text-ellipsis truncate"
+            >
               {{ nodeType?.description || 'Model 节点' }}
+            </p>
+            <p
+              class="text-xs text-gray-500 m-y-1 tracking-[1px] overflow-hidden whitespace-nowrap text-ellipsis truncate"
+              v-if="props.data?.model_name"
+              :title="props.data?.model_name"
+            >
+              模型名称: {{ props.data?.model_name }}
             </p>
           </div>
         </div>
@@ -36,7 +45,7 @@
           placement="top"
         >
           <div
-            class="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
+            class="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
           >
             <TriangleAlert :size="14" />
           </div>
@@ -124,7 +133,8 @@ import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
-  name: string
+  name?: string
+  label?: string
   data: any
   type: string
 }>()
@@ -164,6 +174,7 @@ onMounted(() => {
 watch(
   () => props.data,
   () => {
+    console.log('监听有修改!!!!!!!!!!!', props.data)
     updateIsShowTip()
   },
   { deep: true },

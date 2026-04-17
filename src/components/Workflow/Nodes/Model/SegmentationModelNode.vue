@@ -15,16 +15,25 @@
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
-            :class="`bg-${nodeColor}-100 text-${nodeColor}-600`"
+            :class="getIconStyle(nodeType?.color)"
           >
             <component :size="18" :is="getIconComponent(nodeType?.icon || 'BotIcon')" />
           </div>
-          <div class="flex flex-col">
+          <div class="flex flex-col max-w-[150px]">
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ props.id || 'Model' }}
+              {{ props.label || props.name || props.id || 'Model' }}
             </div>
-            <p class="text-xs text-gray-500 tracking-[1px]">
+            <p
+              class="text-xs text-gray-500 tracking-[1px] overflow-hidden whitespace-nowrap text-ellipsis truncate"
+            >
               {{ nodeType?.description || 'Model 节点' }}
+            </p>
+            <p
+              class="text-xs text-gray-500 m-y-1 tracking-[1px] overflow-hidden whitespace-nowrap text-ellipsis truncate"
+              v-if="props.data?.model_name"
+              :title="props.data?.model_name"
+            >
+              模型名称: {{ props.data?.model_name }}
             </p>
           </div>
         </div>
@@ -36,7 +45,7 @@
           placement="top"
         >
           <div
-            class="flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
+            class="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 hover:bg-red-200 transition-colors cursor-pointer"
           >
             <TriangleAlert :size="14" />
           </div>
@@ -118,14 +127,15 @@ import { Position } from '@vue-flow/core'
 import CustomHandle from '@/components/Workflow/Nodes/Handel/CustomHandle.vue'
 import { useWorkflowStore } from '@/stores/workflow'
 import { TriangleAlert, Trash, Image, Brain, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
+import { getIconComponent, getIconStyle } from '@/components/Workflow/config/nodeConfig'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  name?: string
+  label?: string
   data: any
-  // selected?: boolean
   type: string
 }>()
 const nodeType = computed(() => getNodeType(props.type))
@@ -137,10 +147,6 @@ const deleteNode = () => {
   store.setSelectedNode(null)
 }
 
-const initializeProperties = () => {
-  updateIsShowTip()
-}
-
 const isShowTip = ref(true)
 const TipContent = ref('')
 const updateIsShowTip = () => {
@@ -150,19 +156,25 @@ const updateIsShowTip = () => {
   } else if (!props.data?.model_name) {
     TipContent.value = '请选择模型'
     isShowTip.value = true
+  } else if (!props.data?.device) {
+    TipContent.value = '请选择设备'
+    isShowTip.value = true
+  } else if (props.data?.is_latest === 0 && !props.data.model_version_id) {
+    TipContent.value = '请选择模型版本'
+    isShowTip.value = true
   } else {
     isShowTip.value = false
   }
 }
 
 onMounted(() => {
-  initializeProperties()
+  updateIsShowTip()
 })
 
 watch(
   () => props.data,
   () => {
-    initializeProperties()
+    updateIsShowTip()
   },
   { deep: true },
 )

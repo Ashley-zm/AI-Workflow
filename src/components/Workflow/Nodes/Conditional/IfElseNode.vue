@@ -21,7 +21,7 @@
           </div>
           <div class="flex flex-col">
             <div class="text-orange-600 text-[10px] rounded-full uppercase font-bold">
-              {{ props.id || '条件分支' }}
+              {{ props.label || props.name || props.id || '条件分支' }}
             </div>
             <div class="text-[11px] text-gray-700 tracking-[1px]">
               {{ nodeType?.description || '条件分支节点' }}
@@ -122,6 +122,8 @@ import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  label?: string
+  name?: string
   data: any
   // selected?: boolean
   type: string
@@ -133,7 +135,7 @@ const properties = computed(() => {
   if (Array.isArray(props.data)) {
     return props.data[0] || {}
   }
-  return props.data?.config?.[0] || props.data || {}
+  return props.data || {}
 })
 
 const conditionField = computed(() => {

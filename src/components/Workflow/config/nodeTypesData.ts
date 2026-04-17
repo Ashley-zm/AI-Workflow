@@ -1,6 +1,7 @@
 export const nodeTypesList = [
   {
     name: 'Inputs',
+    label: 'Inputs',
     description: '工作流程运行所需的数据',
     icon: 'ArrowUpFromLine',
     canSelecte: false,
@@ -10,6 +11,7 @@ export const nodeTypesList = [
   },
   {
     name: 'Outputs',
+    label: 'Outputs',
     description: '输出结果配置',
     icon: 'FileOutput',
     canSelecte: false,
@@ -26,8 +28,9 @@ export const nodeTypesList = [
     children: [
       {
         name: 'Detection_Model',
+        label: 'Detection_Model',
         type: 'detection_model@v1',
-        description: '目标检测模型',
+        description: '目标检测',
         icon: 'Brain',
         color: 'blue',
         nodeTag: 'steps',
@@ -35,18 +38,20 @@ export const nodeTypesList = [
       },
       {
         name: 'Classification_Model',
+        label: 'Classification_Model',
         type: 'classification_model@v1',
-        description: '图像分类模型',
-        icon: 'Filter',
+        description: '图像分类',
+        icon: 'Brain',
         color: 'blue',
         nodeTag: 'steps',
         outputs: ['predictions'],
       },
       {
         name: 'Segmentation_Model',
+        label: 'Segmentation_Model',
         type: 'segmentation_model',
-        description: '图像分割模型',
-        icon: 'Crop',
+        description: '图像分割',
+        icon: 'Brain',
         color: 'blue',
         nodeTag: 'steps',
         outputs: ['predictions'],
@@ -62,6 +67,7 @@ export const nodeTypesList = [
     children: [
       {
         name: 'Bounding_Box',
+        label: 'Bounding_Box',
         type: 'bounding_box_visualization@v1',
         description: '检测的物体周围画一个方框',
         icon: 'VectorSquare',
@@ -71,6 +77,7 @@ export const nodeTypesList = [
       },
       {
         name: 'Polygon_Visualization',
+        label: 'Polygon_Visualization',
         type: 'polygon_visualization',
         description: '检测的物体周围画一个多边形',
         icon: 'VectorSquare',
@@ -80,6 +87,7 @@ export const nodeTypesList = [
       },
       {
         name: 'Label_Visualization',
+        label: 'Label_Visualization',
         type: 'label_visualization',
         description: '检测的物体上画标签',
         icon: 'Tag',
@@ -98,6 +106,7 @@ export const nodeTypesList = [
     children: [
       {
         name: 'If_Else',
+        label: 'If_Else',
         type: 'conditional_branch@v1',
         description: '根据布尔条件在两个分支间路由',
         icon: 'Filter',

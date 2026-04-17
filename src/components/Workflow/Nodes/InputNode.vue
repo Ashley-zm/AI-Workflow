@@ -17,7 +17,7 @@
         </div>
         <div class="flex flex-col">
           <span class="text-sm font-bold text-slate-700">
-            {{ props.id || 'Input' }}
+            {{ props.label || props.id || 'Input' }}
           </span>
           <p class="text-xs text-gray-500 tracking-[1px]">
             {{ nodeType?.description || 'Input 节点' }}
@@ -134,6 +134,7 @@ interface Property {
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  label?: string
   data: Array<Property>
   // selected?: boolean
   type: string

@@ -13,7 +13,7 @@
         </div>
         <div class="flex flex-col">
           <span :class="`text-sm font-bold text-${nodeColor}-600`">
-            {{ nodeType?.label || 'Output' }}
+            {{ props.label || props.id || nodeType?.label || 'Output' }}
           </span>
           <p class="text-xs text-gray-500 tracking-[1px]">
             {{ nodeType?.description }}
@@ -36,6 +36,7 @@ import { useWorkflowStore } from '@/stores/workflow'
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  label?: string
   data: any
   // selected?: boolean
   type: string

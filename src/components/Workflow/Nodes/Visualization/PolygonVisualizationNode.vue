@@ -21,7 +21,7 @@
           </div>
           <div class="flex flex-col">
             <div :class="`text-[10px] rounded-full uppercase font-bold text-${nodeColor}-600`">
-              {{ props.id || 'Visualization' }}
+              {{ props.label || props.name || props.id || 'Visualization' }}
             </div>
             <p class="text-xs text-gray-500 tracking-[1px]">
               {{ nodeType?.description || 'Visualization 节点' }}
@@ -142,6 +142,8 @@ import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 const store = useWorkflowStore()
 const props = defineProps<{
   id: string
+  label?: string
+  name?: string
   data: any
   // selected?: boolean
   type: string
