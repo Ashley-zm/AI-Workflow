@@ -9,7 +9,9 @@
           <component :size="18" :is="getIconComponent(nodeObj?.icon || 'BotIcon')" />
         </div>
         <div>
-          <h3 class="font-bold text-gray-800">{{ currentNode?.name }}配置</h3>
+          <h3 class="font-bold text-gray-800">
+            {{ (currentNode?.label || currentNode?.name || currentNode?.id) + '配置' }}
+          </h3>
           <span class="text-xs text-gray-500">{{ currentNode?.type }}</span>
         </div>
       </div>
@@ -27,6 +29,16 @@
         >
           Id: {{ currentNode.id }}
         </div>
+        <div v-if="canEditNodeName" class="mb-4">
+          <label class="mb-1 block text-xs text-slate-500">节点名称</label>
+          <el-input
+            v-model="nodeNameDraft"
+            maxlength="64"
+            placeholder="请输入节点名称"
+            @blur="commitNodeName"
+            @keyup.enter="commitNodeName"
+          />
+        </div>
 
         <component
           :is="currentPropertyComponent"
@@ -42,8 +54,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onUnmounted } from 'vue'
+import { computed, markRaw, onUnmounted, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/stores/workflow'
 import ClassificationModeProperty from './Model/ClassificationModeProperty.vue'
 import ObjectDetectionModeProperty from './Model/ObjectDetectionModeProperty.vue'
@@ -55,9 +68,9 @@ import InputProperty from './InputProperty.vue'
 import OutputProperty from './OutputProperty.vue'
 import { getNodeType } from '@/components/Workflow/config/nodeTypes'
 import { getIconComponent } from '@/components/Workflow/config/nodeConfig'
+
 const store = useWorkflowStore()
 
-// 组件映射表
 const propertyComponents = {
   'detection_model@v1': markRaw(ObjectDetectionModeProperty),
   'classification_model@v1': markRaw(ClassificationModeProperty),
@@ -70,29 +83,67 @@ const propertyComponents = {
   'conditional_branch@v1': markRaw(IfElseProperty),
 }
 
-// 使用 computed 获取当前选中的节点，保证响应性
-const currentNode = computed(() => {
-  // console.log('dddd', store.selectedNode)
-
-  return store.selectedNode
-})
+const currentNode = computed(() => store.selectedNode)
 const nodeObj = computed(() =>
   currentNode.value?.type ? getNodeType(currentNode.value.type) : null,
 )
 const nodeColor = computed(() => nodeObj.value?.color || 'blue')
+const canEditNodeName = computed(() => {
+  const nodeType = String(currentNode.value?.type ?? '')
+  return Boolean(nodeType) && nodeType !== 'inputs' && nodeType !== 'outputs'
+})
+const nodeNameDraft = ref('')
+const getCurrentNodeName = () =>
+  String((currentNode.value as any)?.name ?? (currentNode.value as any)?.label ?? '')
 
-// 根据当前节点类型计算对应的属性组件
+watch(
+  () => currentNode.value?.id,
+  () => {
+    nodeNameDraft.value = getCurrentNodeName()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [(currentNode.value as any)?.name, (currentNode.value as any)?.label],
+  ([nextName, nextLabel]) => {
+    nodeNameDraft.value = String(nextName ?? nextLabel ?? '')
+  },
+)
+
 const currentPropertyComponent = computed(() => {
   if (!currentNode.value) return null
   return propertyComponents[currentNode.value.type as keyof typeof propertyComponents] || null
 })
 
-// 更新节点配置的方法
 const updateNodeConfig = (newConfig: any) => {
   if (currentNode.value) {
-    // 使用 store 的 updateNode 方法，这样会自动记录历史
     store.updateNode(currentNode.value.id, newConfig)
   }
+}
+
+const commitNodeName = () => {
+  if (!currentNode.value || !canEditNodeName.value) return
+
+  const nextName = String(nodeNameDraft.value ?? '').trim()
+  if (!nextName) {
+    ElMessage.warning('节点名称不能为空')
+    nodeNameDraft.value = getCurrentNodeName()
+    return
+  }
+
+  const result = store.updateNodeName(String(currentNode.value.id), nextName)
+  if (!result.ok) {
+    if (result.reason === 'duplicate') {
+      ElMessage.warning('节点名称不能重复')
+    } else if (result.reason === 'empty') {
+      ElMessage.warning('节点名称不能为空')
+    }
+    nodeNameDraft.value = getCurrentNodeName()
+    return
+  }
+
+  nodeNameDraft.value = nextName
 }
 
 onUnmounted(() => {
