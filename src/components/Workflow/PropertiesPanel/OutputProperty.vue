@@ -96,6 +96,12 @@
             <h3 class="text-sm font-semibold text-slate-800">输入数据</h3>
           </div>
           <div class="flex items-center gap-2">
+            <button
+              class="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              @click="isInputDataCollapsed = !isInputDataCollapsed"
+            >
+              {{ isInputDataCollapsed ? '展开' : '收起' }}
+            </button>
             <el-button
               v-if="sourceNodes.length > 0"
               size="small"
@@ -108,115 +114,118 @@
             </el-button>
           </div>
         </div>
-
-        <div v-if="sourceNodes.length > 0" class="space-y-3">
-          <div
-            v-for="(node, index) in sourceNodes"
-            :key="index"
-            class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden hover:border-purple-300 transition-all hover:shadow-md"
-          >
+        <div v-show="!isInputDataCollapsed">
+          <div v-if="sourceNodes.length > 0" class="space-y-3">
             <div
-              class="flex items-center justify-between bg-gradient-to-r from-slate-50 to-white px-4 py-3 border-b border-slate-200 cursor-pointer"
-              @click="toggleNodeExpand(node.id)"
+              v-for="(node, index) in sourceNodes"
+              :key="index"
+              class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden hover:border-purple-300 transition-all hover:shadow-md"
             >
-              <div class="flex items-center gap-3">
-                <div
-                  class="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-500"
-                >
-                  <component :is="getNodeTypeIcon(node.type)" :size="16" class="text-white" />
-                </div>
-                <div>
-                  <div class="text-sm font-semibold text-slate-800">
-                    {{ node.data?.label || node.type }}
+              <div
+                class="flex items-center justify-between bg-gradient-to-r from-slate-50 to-white px-4 py-3 border-b border-slate-200 cursor-pointer"
+                @click="toggleNodeExpand(node.id)"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="h-8 w-8 rounded-lg flex items-center justify-center shadow-sm bg-slate-500"
+                  >
+                    <component :is="getNodeTypeIcon(node.type)" :size="16" class="text-white" />
                   </div>
-                  <div class="flex items-center gap-2 text-[11px] text-slate-500">
-                    <el-tag size="small" type="info" class="!text-[10px]">
-                      ID: {{ node.id }}
-                    </el-tag>
-                    <el-tag size="small" :type="getNodeStatusType(node)" class="!text-[10px]">
+                  <div>
+                    <div class="text-sm font-semibold text-slate-800">
+                      {{ node.data?.label || node.type }}
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                      <el-tag size="small" type="info" class="!text-[10px]">
+                        ID: {{ node.id }}
+                      </el-tag>
+                      <el-tag size="small" :type="getNodeStatusType(node)" class="!text-[10px]">
+                        {{ getNodeStatusText(node) }}
+                      </el-tag>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <ChevronDown
+                    :size="16"
+                    class="text-slate-400 transition-transform"
+                    :class="{ 'rotate-180': expandedNodes.has(node.id) }"
+                  />
+                </div>
+              </div>
+
+              <div v-show="expandedNodes.has(node.id)" class="p-4 space-y-3">
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="rounded-lg bg-blue-50 p-3 border border-blue-100">
+                    <div class="flex items-center gap-1.5 text-[10px] text-blue-600 mb-1">
+                      <Database :size="10" />
+                      <span>数据属性</span>
+                    </div>
+                    <div class="text-lg font-bold text-blue-700">
+                      {{ getNodePropertiesCount(node) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-emerald-50 p-3 border border-emerald-100">
+                    <div class="flex items-center gap-1.5 text-[10px] text-emerald-600 mb-1">
+                      <FileText :size="10" />
+                      <span>数据类型</span>
+                    </div>
+                    <div class="text-sm font-semibold text-emerald-700">
+                      {{ getDataType(node) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-purple-50 p-3 border border-purple-100">
+                    <div class="flex items-center gap-1.5 text-[10px] text-purple-600 mb-1">
+                      <Activity :size="10" />
+                      <span>状态</span>
+                    </div>
+                    <div class="text-sm font-semibold text-purple-700">
                       {{ getNodeStatusText(node) }}
-                    </el-tag>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <ChevronDown
-                  :size="16"
-                  class="text-slate-400 transition-transform"
-                  :class="{ 'rotate-180': expandedNodes.has(node.id) }"
-                />
-              </div>
-            </div>
 
-            <div v-show="expandedNodes.has(node.id)" class="p-4 space-y-3">
-              <div class="grid grid-cols-3 gap-3">
-                <div class="rounded-lg bg-blue-50 p-3 border border-blue-100">
-                  <div class="flex items-center gap-1.5 text-[10px] text-blue-600 mb-1">
-                    <Database :size="10" />
-                    <span>数据属性</span>
+                <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-medium text-slate-400">数据预览</span>
+                    <div class="flex items-center gap-1">
+                      <button
+                        class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                        @click="copyNodeData(node)"
+                      >
+                        <Copy :size="12" class="mr-1" />
+                        复制
+                      </button>
+                      <button
+                        class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                        @click="downloadNodeData(node)"
+                      >
+                        <Download :size="12" class="mr-1" />
+                        下载
+                      </button>
+                    </div>
                   </div>
-                  <div class="text-lg font-bold text-blue-700">
-                    {{ getNodePropertiesCount(node) }}
-                  </div>
+                  <pre
+                    class="text-[11px] leading-relaxed font-mono text-slate-100 overflow-x-auto whitespace-pre-wrap break-all"
+                    >{{ formatNodeData(node) }}</pre
+                  >
                 </div>
-                <div class="rounded-lg bg-emerald-50 p-3 border border-emerald-100">
-                  <div class="flex items-center gap-1.5 text-[10px] text-emerald-600 mb-1">
-                    <FileText :size="10" />
-                    <span>数据类型</span>
-                  </div>
-                  <div class="text-sm font-semibold text-emerald-700">{{ getDataType(node) }}</div>
-                </div>
-                <div class="rounded-lg bg-purple-50 p-3 border border-purple-100">
-                  <div class="flex items-center gap-1.5 text-[10px] text-purple-600 mb-1">
-                    <Activity :size="10" />
-                    <span>状态</span>
-                  </div>
-                  <div class="text-sm font-semibold text-purple-700">
-                    {{ getNodeStatusText(node) }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="rounded-lg bg-slate-900 p-4 border border-slate-700">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-medium text-slate-400">数据预览</span>
-                  <div class="flex items-center gap-1">
-                    <button
-                      class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                      @click="copyNodeData(node)"
-                    >
-                      <Copy :size="12" class="mr-1" />
-                      复制
-                    </button>
-                    <button
-                      class="rounded px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                      @click="downloadNodeData(node)"
-                    >
-                      <Download :size="12" class="mr-1" />
-                      下载
-                    </button>
-                  </div>
-                </div>
-                <pre
-                  class="text-[11px] leading-relaxed font-mono text-slate-100 overflow-x-auto whitespace-pre-wrap break-all"
-                  >{{ formatNodeData(node) }}</pre
-                >
               </div>
             </div>
           </div>
-        </div>
 
-        <div
-          v-else
-          class="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-slate-50 border-2 border-dashed border-slate-300 text-center"
-        >
-          <div class="mb-4 flex justify-center">
-            <div class="rounded-full bg-slate-200 p-4">
-              <Link :size="32" class="text-slate-400" />
+          <div
+            v-else
+            class="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-slate-50 border-2 border-dashed border-slate-300 text-center"
+          >
+            <div class="mb-4 flex justify-center">
+              <div class="rounded-full bg-slate-200 p-4">
+                <Link :size="32" class="text-slate-400" />
+              </div>
             </div>
+            <p class="text-sm text-slate-600 font-medium mb-1">暂无连接</p>
+            <p class="text-xs text-slate-400">请将其他节点连接至此节点以查看数据</p>
           </div>
-          <p class="text-sm text-slate-600 font-medium mb-1">暂无连接</p>
-          <p class="text-xs text-slate-400">请将其他节点连接至此节点以查看数据</p>
         </div>
       </div>
       <!-- Output Data -->
@@ -332,6 +341,7 @@ const emit = defineEmits<{
 
 const { findNode, edges } = useVueFlow()
 const expandedNodes = ref(new Set<string>())
+const isInputDataCollapsed = ref(true)
 const isJsonPreviewCollapsed = ref(true)
 
 interface OutputField {
