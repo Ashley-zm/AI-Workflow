@@ -3,6 +3,13 @@
   <path
     :d="path[0]"
     fill="none"
+    :stroke="edgeStrokeColor"
+    :stroke-width="2"
+    style="pointer-events: none"
+  />
+  <path
+    :d="path[0]"
+    fill="none"
     stroke="transparent"
     :stroke-width="20"
     style="pointer-events: stroke"
@@ -62,6 +69,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  sourceHandle: {
+    type: [String, Boolean],
+    required: false,
+  },
   markerEnd: {
     type: String,
     required: false,
@@ -79,9 +90,30 @@ const path = computed(() =>
   }),
 )
 
+const currentEdge = computed(() => store.edges.find((edge) => String(edge.id) === String(props.id)))
+
+const normalizeSourceHandle = (value: unknown): boolean | null => {
+  if (value === true || value === 'true') return true
+  if (value === false || value === 'false') return false
+  return null
+}
+
+const effectiveSourceHandle = computed(() => {
+  const edgeSourceHandle = (currentEdge.value as any)?.sourceHandle
+  if (edgeSourceHandle !== undefined) return edgeSourceHandle
+  return props.sourceHandle
+})
+
+const edgeStrokeColor = computed(() => {
+  const normalized = normalizeSourceHandle(effectiveSourceHandle.value)
+  if (normalized === true) return '#22c55e'
+  if (normalized === false) return '#ef4444'
+  return '#b5b5b5'
+})
+
 const edgeStyle = computed(() => ({
-  stroke: '#5e5e5eff',
-  ...(props.style || {}),
+  // ...(props.style || {}),
+  stroke: edgeStrokeColor.value,
 }))
 
 const isEdgeHovered = ref(false)
