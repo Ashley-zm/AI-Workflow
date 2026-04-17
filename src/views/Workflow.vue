@@ -58,6 +58,7 @@
             :target-y="buttonEdgeProps.targetY"
             :source-position="buttonEdgeProps.sourcePosition"
             :target-position="buttonEdgeProps.targetPosition"
+            :source-handle="buttonEdgeProps.sourceHandleId"
             :marker-end="buttonEdgeProps.markerEnd"
             :style="buttonEdgeProps.style"
           />
@@ -189,6 +190,7 @@ const DEFAULT_WORKFLOW_NODES: Node[] = [
     id: 'inputs',
     type: 'inputs',
     name: 'Inputs',
+    label: 'Inputs',
     position: { x: 100, y: 300 },
     data: [],
   } as Node,
@@ -196,6 +198,7 @@ const DEFAULT_WORKFLOW_NODES: Node[] = [
     id: 'outputs',
     type: 'outputs',
     name: 'Outputs',
+    label: 'Outputs',
     position: { x: 500, y: 300 },
     data: [],
   } as Node,
@@ -242,6 +245,7 @@ const normalizeNodes = (value: unknown): Node[] => {
         id: String(node.id ?? `node_${index}`),
         type: String(node.type ?? 'custom'),
         name: String(node.name ?? `node_${index}`),
+        label: String(node.label ?? node.name ?? `node_${index}`),
         position: {
           x: Number.isFinite(x) ? x : 100 + index * 80,
           y: Number.isFinite(y) ? y : 200,
@@ -633,6 +637,7 @@ const onDrop = (event: DragEvent) => {
     id: step ? `${nodeObj.name}_${step}` : `${nodeObj.name}`,
     type: nodeObj.type,
     name: step ? `${nodeObj.name}_${step}` : nodeObj.name,
+    label: step ? `${nodeObj.label}_${step}` : nodeObj.label,
     position,
     data: {},
   }
@@ -934,6 +939,7 @@ const handleComponentSelect = (componentType: string) => {
     id: step ? `${nodeObj.name}_${step}` : `${nodeObj.name}`,
     type: nodeObj.type,
     name: step ? `${nodeObj.name}_${step}` : nodeObj.name,
+    label: step ? `${nodeObj.label}_${step}` : nodeObj.label,
     position: newPosition,
     data: {},
   }
