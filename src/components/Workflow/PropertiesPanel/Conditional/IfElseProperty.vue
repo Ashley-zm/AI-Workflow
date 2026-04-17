@@ -166,7 +166,7 @@ const fieldOptions = computed<string[]>(() => {
         (node.type === 'classification_model@v1' || node.type === 'classification-model')
       )
     })
-    .map((node) => `$steps.${String((node as any).name || node.id)}.passed`)
+    .map((node) => `$steps.${String((node as any).name || node.id)}.predictions.passed`)
     .filter((item) => item.length > 0)
 })
 
