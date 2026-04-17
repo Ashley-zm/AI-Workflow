@@ -34,8 +34,8 @@ export const getNodeEdgeType = () => {
       type: MarkerType.ArrowClosed,
       color: '#8f8f8f',
     },
-    style: {
-      stroke: '#8f8f8f',
-    },
+    // style: {
+    //   stroke: '#8f8f8f',
+    // },
   }
 }
