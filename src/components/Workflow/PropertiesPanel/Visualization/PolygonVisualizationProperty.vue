@@ -401,7 +401,7 @@ const props = defineProps<{
 }>()
 
 interface Property {
-  image?: string
+  image: string
   predictions?: string
   polygonColor: string
   polygonWidth: number
@@ -421,7 +421,7 @@ const store = useWorkflowStore()
 const showImageSelectionDialog = ref(false)
 const showPredictionSelectionDialog = ref(false)
 const defaultData = (): Property => ({
-  image: undefined,
+  image: '',
   predictions: undefined,
   polygonColor: '#FF0000',
   polygonWidth: 2,
@@ -524,7 +524,7 @@ const selectPredictionProperty = (node: any, property: any) => {
 }
 
 const clearSelectedImage = () => {
-  data.value.image = undefined
+  data.value.image = ''
   updateConfig()
   ElMessage.info('已清空选中的图片属性')
 }

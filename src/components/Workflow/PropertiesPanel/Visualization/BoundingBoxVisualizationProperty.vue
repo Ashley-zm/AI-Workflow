@@ -366,7 +366,7 @@ const props = defineProps<{
 }>()
 
 interface Property {
-  image?: string
+  image: string
   predictions?: string
   box_color?: string
   box_thickness: number
@@ -380,7 +380,7 @@ const emit = defineEmits<{
 
 const store = useWorkflowStore()
 const defaultData = (): Property => ({
-  image: undefined,
+  image: '',
   predictions: undefined,
   box_color: '#FF0000',
   box_thickness: 2,
@@ -486,7 +486,7 @@ const selectPredictionProperty = (node: any, property: any) => {
 }
 
 const clearSelectedImage = () => {
-  data.value.image = undefined
+  data.value.image = ''
   updateConfig()
   ElMessage.info('已清空选中的图片属性')
 }

@@ -374,7 +374,7 @@ interface ModelOption {
 }
 
 interface Property {
-  images?: string
+  images: string
   model_repository_id?: string
   model_name?: string
   is_latest: number
@@ -401,7 +401,7 @@ const showImageSelectionDialog = ref(false)
 const modelList = ref<ModelOption[]>([])
 
 const defaultData = (): Property => ({
-  images: undefined,
+  images: '',
   model_repository_id: undefined,
   model_name: undefined,
   is_latest: 1, //是否选择最新版本(0:否 1:是)
@@ -486,7 +486,7 @@ const selectImageProperty = (node: any, property: any) => {
 }
 
 const clearSelectedImage = () => {
-  data.value.images = undefined
+  data.value.images = ''
   updateConfig()
   // ElMessage.info('已清空选中的图片属性')
 }

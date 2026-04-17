@@ -12,6 +12,10 @@ interface WorkflowViewportInfo {
 }
 
 export type WorkflowHealthStatus = 'checking' | 'healthy' | 'warning' | 'error'
+type UpdateNodeNameFailReason = 'not_found' | 'readonly' | 'empty' | 'duplicate'
+type UpdateNodeNameResult =
+  | { ok: true; changed: boolean }
+  | { ok: false; reason: UpdateNodeNameFailReason }
 
 export const useWorkflowStore = defineStore('workflow', () => {
   const historyStore = useHistoryStore()
@@ -62,6 +66,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       id: 'inputs',
       type: 'inputs',
       name: 'inputs',
+      label: 'inputs',
       position: { x: 100, y: 300 },
       data: [],
     },
@@ -69,6 +74,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       id: 'outputs',
       type: 'outputs',
       name: 'outputs',
+      label: 'outputs',
       position: { x: 500, y: 300 },
       data: [],
     },
@@ -229,6 +235,48 @@ export const useWorkflowStore = defineStore('workflow', () => {
     return changed ? { nextValue: nextObject, changed: true } : { nextValue: value, changed: false }
   }
 
+  const replaceStepReferencePrefixInValue = (
+    value: unknown,
+    oldPrefix: string,
+    newPrefix: string,
+  ): { nextValue: unknown; changed: boolean } => {
+    if (typeof value === 'string') {
+      if (value === oldPrefix) {
+        return { nextValue: newPrefix, changed: true }
+      }
+      if (value.startsWith(`${oldPrefix}.`)) {
+        return { nextValue: `${newPrefix}${value.slice(oldPrefix.length)}`, changed: true }
+      }
+      return { nextValue: value, changed: false }
+    }
+
+    if (Array.isArray(value)) {
+      let changed = false
+      const nextArray = value.map((item) => {
+        const result = replaceStepReferencePrefixInValue(item, oldPrefix, newPrefix)
+        if (result.changed) changed = true
+        return result.nextValue
+      })
+      return changed
+        ? { nextValue: nextArray, changed: true }
+        : { nextValue: value, changed: false }
+    }
+
+    if (!value || typeof value !== 'object') {
+      return { nextValue: value, changed: false }
+    }
+
+    let changed = false
+    const nextObject: Record<string, unknown> = {}
+    Object.entries(value as Record<string, unknown>).forEach(([key, rawValue]) => {
+      const result = replaceStepReferencePrefixInValue(rawValue, oldPrefix, newPrefix)
+      if (result.changed) changed = true
+      nextObject[key] = result.nextValue
+    })
+
+    return changed ? { nextValue: nextObject, changed: true } : { nextValue: value, changed: false }
+  }
+
   const applyReferenceUpdatesToOtherNodes = (params: {
     exactMap?: Map<string, RefReplacementValue>
     clearPrefixes?: string[]
@@ -257,6 +305,35 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
   }
 
+  const replaceStepNameReferences = (params: {
+    excludeNodeId: string
+    oldName: string
+    newName: string
+  }) => {
+    const oldName = normalizeName(params.oldName)
+    const newName = normalizeName(params.newName)
+    if (!oldName || !newName || oldName === newName) return
+
+    const oldPrefix = `$steps.${oldName}`
+    const newPrefix = `$steps.${newName}`
+    let changed = false
+
+    nodes.value = nodes.value.map((node) => {
+      if (String(node.id) === params.excludeNodeId) return node
+      const replaced = replaceStepReferencePrefixInValue(node.data, oldPrefix, newPrefix)
+      if (!replaced.changed) return node
+      changed = true
+      return {
+        ...node,
+        data: replaced.nextValue as any,
+      } as Node
+    })
+
+    if (changed && selectedNode.value?.id) {
+      selectedNode.value = nodes.value.find((node) => node.id === selectedNode.value?.id) || null
+    }
+  }
+
   const updateAllData = (currentNode: Node, previousData: unknown, nextData: unknown) => {
     const nodeId = String(currentNode.id ?? '')
     const previousIsEmpty = Array.isArray(previousData) && previousData.length === 0
@@ -269,6 +346,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     // inputs 从空变为有值，且含 image 类型时，回填非 outputs 节点的 image/images 字段
     if (previousIsEmpty && nextImageNames.length > 0) {
+      console.log('回填 image/images 字段', nextImageNames)
       const defaultImageSelector = `$inputs.${nextImageNames[0]}`
       let changed = false
 
@@ -288,6 +366,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       if (changed && selectedNode.value?.id) {
         selectedNode.value = nodes.value.find((node) => node.id === selectedNode.value?.id) || null
       }
+      console.log('更新 nodes.value 字段', nodes.value)
     }
 
     const nextNames = extractNameListFromNodeData(nextData)
@@ -742,6 +821,52 @@ export const useWorkflowStore = defineStore('workflow', () => {
     historyStore.recordState(nodes.value, edges.value, 'update_node')
   }
 
+  const updateNodeName = (nodeId: string, rawName: unknown): UpdateNodeNameResult => {
+    const nodeIndex = nodes.value.findIndex((node) => String(node.id) === String(nodeId))
+    if (nodeIndex === -1) return { ok: false, reason: 'not_found' }
+
+    const currentNode = nodes.value[nodeIndex] as Node
+    const nodeType = String(currentNode.type ?? '')
+    if (nodeType === 'inputs' || nodeType === 'outputs') {
+      return { ok: false, reason: 'readonly' }
+    }
+
+    const nextName = normalizeName(rawName)
+    if (!nextName) return { ok: false, reason: 'empty' }
+
+    const duplicated = nodes.value.some((node, index) => {
+      if (index === nodeIndex) return false
+      if (String(node.type ?? '') === 'inputs' || String(node.type ?? '') === 'outputs')
+        return false
+      const nodeName = normalizeName((node as any).name || (node as any).label)
+      return nodeName === nextName
+    })
+    if (duplicated) return { ok: false, reason: 'duplicate' }
+
+    const previousName = normalizeName((currentNode as any).name || (currentNode as any).label)
+    if (previousName === nextName) return { ok: true, changed: false }
+
+    const updatedNode = {
+      ...currentNode,
+      name: nextName,
+      label: nextName,
+    } as Node
+
+    nodes.value = nodes.value.map((node, index) => (index === nodeIndex ? updatedNode : node))
+    if (selectedNode.value?.id === nodeId) {
+      selectedNode.value = updatedNode
+    }
+
+    replaceStepNameReferences({
+      excludeNodeId: String(nodeId),
+      oldName: previousName,
+      newName: nextName,
+    })
+
+    historyStore.recordState(nodes.value, edges.value, 'update_node_name')
+    return { ok: true, changed: true }
+  }
+
   // 添加边
   const addEdge = (edge: Edge) => {
     edges.value.push({
@@ -862,6 +987,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
           ui_position: item.position,
           name: item.name,
           // outputs 是一个数组，每个元素是一个对象，包含 name type selector,过滤掉name\type\selector不存在的数据
+          // outputs: outputSelector(),
           outputs: item.data.filter((output: any) => output.name && output.type && output.selector),
         })),
       edges: edges.value.map((item) => ({
@@ -883,6 +1009,22 @@ export const useWorkflowStore = defineStore('workflow', () => {
       },
     }
   }
+  // const outputSelector = () => {
+  //   const outputs = nodes.value.filter((item) => item.type === 'outputs')
+  //   const selectors =
+  //     outputs[0]?.data?.filter((output: any) => output.name && output.type && output.selector) || []
+  //   const selectorsNew = selectors.map((item: any) => ({
+  //     name: item.name,
+  //     type: item.type,
+  //     selector:
+  //       item.selector == '$steps.Classification_Model.predictions'
+  //         ? '$steps.Classification_Model'
+  //         : item.selector,
+  //   }))
+  //   console.log('outputs', outputs)
+  //   console.log('selectorsNew', selectorsNew)
+  //   return selectorsNew
+  // }
 
   return {
     workflowInfo,
@@ -912,6 +1054,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     addNode,
     removeNode,
     updateNode,
+    updateNodeName,
     addEdge,
     removeEdge,
     setSelectedNode,

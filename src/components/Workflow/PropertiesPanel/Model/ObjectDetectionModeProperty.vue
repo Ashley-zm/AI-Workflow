@@ -258,9 +258,10 @@
         v-show="!isJsonPreviewCollapsed"
         class="rounded-lg border border-slate-700 bg-slate-900 p-4"
       >
-        <pre class="whitespace-pre-wrap font-mono text-xs text-slate-100">{{
-          JSON.stringify(data, null, 2)
-        }}</pre>
+        <pre class="whitespace-pre-wrap font-mono text-xs text-slate-100">
+          <!-- data对象过滤掉 model_repository_id 字段 -->
+          {{ JSON.stringify(data, null, 2) }}
+        </pre>
       </div>
     </div>
     <el-dialog
@@ -349,7 +350,7 @@ interface ModelOption {
 }
 
 interface Property {
-  images?: string
+  images: string
   model_repository_id?: string
   model_name?: string
   is_latest: number
@@ -374,7 +375,7 @@ const showImageSelectionDialog = ref(false)
 const modelList = ref<ModelOption[]>([])
 
 const defaultData = (): Property => ({
-  images: undefined,
+  images: '',
   model_repository_id: undefined,
   model_name: undefined,
   is_latest: 1, //是否选择最新版本(0:否 1:是)
@@ -448,7 +449,7 @@ const selectImageProperty = (node: any, property: any) => {
 }
 
 const clearSelectedImage = () => {
-  data.value.images = undefined
+  data.value.images = ''
   updateConfig()
   ElMessage.info('已清空选中的图片属性')
 }

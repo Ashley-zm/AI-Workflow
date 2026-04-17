@@ -282,8 +282,8 @@ const isTemplateLocked = (template: TemplateEntity) => {
   const name = String(template.templateName ?? '')
     .trim()
     .toLowerCase()
-  return name === 'blank template'
-  // return name === '空白模板' || name === 'blank template'
+  // return name === 'blank template'
+  return name === '空白模板' || name === 'blank template'
 }
 
 const normalizeWorkflowField = (value: string) => {
