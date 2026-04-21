@@ -1,6 +1,10 @@
 <template>
   <div class="min-h-screen bg-[#ffffff] px-4 py-6 md:px-8">
     <div class="mx-auto w-full">
+      <!-- <header class="mb-5">
+        <h1 class="text-2xl font-bold text-slate-900">工作流</h1>
+      </header> -->
+
       <section
         class="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between"
       >
@@ -95,10 +99,7 @@
       <el-scrollbar
         ref="gridScrollbarRef"
         v-if="viewMode === 'card'"
-        :loading="workflowLoading"
-        loading-text="loadingText"
         max-height="calc(100vh - 135px)"
-        min-height="400px"
         :distance="100"
         @end-reached="loadMore"
         @scroll="onGridScroll"
@@ -107,52 +108,23 @@
           <article
             v-for="item in workflowItems"
             :key="item.id"
-            class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+            class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <button
               type="button"
               class="block w-full cursor-pointer text-left"
               @click="openEditor(item.id)"
             >
-              <div
-                :ref="(el) => setPreviewContainerRef(item.id, el)"
-                class="relative flex h-40 items-center justify-center bg-slate-50 z-1"
-              >
-                <VueFlow
-                  :key="getPreviewFlowKey(item.id, item.workflowJsonData)"
-                  class="preview-flow-canvas w-full h-full bg-slate-50"
-                  :nodes="getNode(item.workflowJsonData)"
-                  :edges="getEdge(item.workflowJsonData)"
-                  :node-types="allNodeTypes"
-                  :default-viewport="getPreviewViewport(item.id, item.workflowJsonData)"
-                  :min-zoom="PREVIEW_MIN_ZOOM"
-                  :max-zoom="PREVIEW_MAX_ZOOM"
-                  :zoom-on-scroll="false"
-                  :zoom-on-pinch="false"
-                  :zoom-on-double-click="false"
-                  :pan-on-drag="false"
-                  :pan-on-scroll="false"
-                  :nodes-draggable="false"
-                  :nodes-connectable="false"
-                  :connect-on-click="false"
-                  :elements-selectable="false"
-                >
-                  <!-- 自定义边 （类型为按钮）-->
-                  <template #edge-button="buttonEdgeProps">
-                    <EdgeWithButton
-                      :id="buttonEdgeProps.id"
-                      :source-x="buttonEdgeProps.sourceX"
-                      :source-y="buttonEdgeProps.sourceY"
-                      :target-x="buttonEdgeProps.targetX"
-                      :target-y="buttonEdgeProps.targetY"
-                      :source-position="buttonEdgeProps.sourcePosition"
-                      :target-position="buttonEdgeProps.targetPosition"
-                      :source-handle="buttonEdgeProps.sourceHandleId"
-                      :marker-end="buttonEdgeProps.markerEnd"
-                      :style="buttonEdgeProps.style"
-                    />
-                  </template>
-                </VueFlow>
+              <div class="flex h-40 items-center justify-center bg-slate-50 p-4">
+                <div class="preview-flow">
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                  <div class="preview-line"></div>
+                  <div class="preview-node"></div>
+                </div>
               </div>
               <div class="space-y-2 border-t border-slate-100 p-4">
                 <div class="flex items-center gap-2">
@@ -372,7 +344,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -390,13 +362,10 @@ import {
   Trash2,
   Group,
 } from 'lucide-vue-next'
-import { VueFlow, type Edge, type Node } from '@vue-flow/core'
 import { groupApi, workflowApi } from '@/api'
 import type { WorkflowEntity, WorkflowListQuery } from '@/types/workflow-api'
 import CreateWorkflowDialog from '@/components/Workflow/CreateWorkflowDialog.vue'
 import EditWorkflowBaseDialog from '@/components/Workflow/EditWorkflowBaseDialog.vue'
-import EdgeWithButton from '@/components/Workflow/Edges/EdgeWithButton.vue'
-import { allNodeTypes, getNodeEdgeType } from '@/components/Workflow/config/nodeTypes'
 
 type ViewMode = 'card' | 'list'
 type CardCommand = 'edit' | 'copy' | 'delete'
@@ -410,17 +379,6 @@ interface WorkflowViewItem extends WorkflowEntity {
   id: string
   groupLabel: string
   updatedAt: string
-}
-
-interface PreviewSize {
-  width: number
-  height: number
-}
-
-interface FlowViewport {
-  x: number
-  y: number
-  zoom: number
 }
 
 const router = useRouter()
@@ -443,14 +401,6 @@ const activeActionMenuKey = ref('')
 const workflows = ref<WorkflowEntity[]>([])
 const groups = ref<GroupOption[]>([])
 const gridScrollbarRef = ref<{ wrapRef?: HTMLElement } | null>(null)
-const previewSizes = ref<Record<string, PreviewSize>>({})
-const previewObservers = new Map<string, ResizeObserver>()
-
-const PREVIEW_PADDING = 20
-const PREVIEW_MIN_ZOOM = 0.05
-const PREVIEW_MAX_ZOOM = 0.6
-const DEFAULT_NODE_WIDTH = 250
-const DEFAULT_NODE_HEIGHT = 110
 
 const GRID_LOAD_TRIGGER_DISTANCE = 120
 
@@ -479,187 +429,6 @@ const workflowItems = computed<WorkflowViewItem[]>(() => {
   })
 })
 
-const updatePreviewSize = (workflowId: string, element: HTMLElement) => {
-  const rect = element.getBoundingClientRect()
-  const width = Math.round(rect.width)
-  const height = Math.round(rect.height)
-  if (!width || !height) return
-
-  const previous = previewSizes.value[workflowId]
-  if (previous && previous.width === width && previous.height === height) return
-
-  previewSizes.value = {
-    ...previewSizes.value,
-    [workflowId]: { width, height },
-  }
-}
-
-const setPreviewContainerRef = (
-  workflowId: string,
-  target: Element | ComponentPublicInstance | null,
-) => {
-  const previousObserver = previewObservers.get(workflowId)
-  if (previousObserver) {
-    previousObserver.disconnect()
-    previewObservers.delete(workflowId)
-  }
-
-  if (!target) return
-
-  const element = target instanceof HTMLElement ? target : ((target as any).$el as HTMLElement)
-  if (!(element instanceof HTMLElement)) return
-
-  updatePreviewSize(workflowId, element)
-
-  if (typeof ResizeObserver === 'undefined') return
-  const observer = new ResizeObserver(() => updatePreviewSize(workflowId, element))
-  observer.observe(element)
-  previewObservers.set(workflowId, observer)
-}
-
-const parseWorkflowJsonData = (value: unknown): Record<string, any> | null => {
-  if (!value) return null
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value) as Record<string, any>
-    } catch {
-      return null
-    }
-  }
-  if (typeof value === 'object') return value as Record<string, any>
-  return null
-}
-
-const normalizePreviewNodes = (value: unknown): Node[] => {
-  if (!Array.isArray(value)) return []
-  return value
-    .filter((item) => item && typeof item === 'object')
-    .map((item, index) => {
-      const node = item as Record<string, any>
-      const rawPosition = (node.position ?? {}) as Record<string, unknown>
-      const x = Number(rawPosition.x)
-      const y = Number(rawPosition.y)
-      return {
-        ...node,
-        id: String(node.id ?? `preview_node_${index}`),
-        type: String(node.type ?? 'default'),
-        position: {
-          x: Number.isFinite(x) ? x : 40 + index * 80,
-          y: Number.isFinite(y) ? y : 80,
-        },
-      } as Node
-    })
-}
-
-const normalizePreviewEdges = (value: unknown): Edge[] => {
-  if (!Array.isArray(value)) return []
-  return value
-    .filter((item) => item && typeof item === 'object')
-    .map((item, index) => {
-      const edge = item as Record<string, any>
-      return {
-        ...getNodeEdgeType(),
-        ...edge,
-        id: String(edge.id ?? `preview_edge_${index}`),
-        source: String(edge.source ?? ''),
-        target: String(edge.target ?? ''),
-        type: String(edge.type ?? 'button'),
-        animated: edge.animated ?? true,
-      } as Edge
-    })
-    .filter((edge) => edge.source && edge.target)
-}
-
-const getNodeBounds = (nodes: Node[]) => {
-  if (!nodes.length) return null
-
-  let minX = Number.POSITIVE_INFINITY
-  let minY = Number.POSITIVE_INFINITY
-  let maxX = Number.NEGATIVE_INFINITY
-  let maxY = Number.NEGATIVE_INFINITY
-
-  nodes.forEach((node) => {
-    const x = Number(node.position?.x ?? 0)
-    const y = Number(node.position?.y ?? 0)
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return
-
-    const width = Number(
-      (node as any).dimensions?.width ?? (node as any).width ?? DEFAULT_NODE_WIDTH,
-    )
-    const height = Number(
-      (node as any).dimensions?.height ?? (node as any).height ?? DEFAULT_NODE_HEIGHT,
-    )
-
-    const nodeWidth = Number.isFinite(width) && width > 0 ? width : DEFAULT_NODE_WIDTH
-    const nodeHeight = Number.isFinite(height) && height > 0 ? height : DEFAULT_NODE_HEIGHT
-
-    minX = Math.min(minX, x)
-    minY = Math.min(minY, y)
-    maxX = Math.max(maxX, x + nodeWidth)
-    maxY = Math.max(maxY, y + nodeHeight)
-  })
-
-  if (![minX, minY, maxX, maxY].every((value) => Number.isFinite(value))) return null
-
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(1, maxX - minX),
-    height: Math.max(1, maxY - minY),
-  }
-}
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
-
-const getNode = (workflowJsonData: unknown) => {
-  const parsed = parseWorkflowJsonData(workflowJsonData)
-  return normalizePreviewNodes(parsed?.ui_metadata?.nodes)
-}
-
-const getEdge = (workflowJsonData: unknown) => {
-  const parsed = parseWorkflowJsonData(workflowJsonData)
-  return normalizePreviewEdges(parsed?.edges ?? parsed?.ui_metadata?.edges)
-}
-
-const getPreviewViewport = (workflowId: string, workflowJsonData: unknown): FlowViewport => {
-  const size = previewSizes.value[workflowId]
-  const nodes = getNode(workflowJsonData)
-  const bounds = getNodeBounds(nodes)
-
-  if (!size || !bounds) {
-    return { x: 0, y: 0, zoom: PREVIEW_MIN_ZOOM }
-  }
-
-  const usableWidth = Math.max(1, size.width - PREVIEW_PADDING * 2)
-  const usableHeight = Math.max(1, size.height - PREVIEW_PADDING * 2)
-  const zoomByWidth = usableWidth / bounds.width
-  const zoomByHeight = usableHeight / bounds.height
-  const zoom = clamp(Math.min(zoomByWidth, zoomByHeight), PREVIEW_MIN_ZOOM, PREVIEW_MAX_ZOOM)
-
-  const centerX = bounds.minX + bounds.width / 2
-  const centerY = bounds.minY + bounds.height / 2
-  const x = size.width / 2 - centerX * zoom
-  const y = size.height / 2 - centerY * zoom
-
-  return { x, y, zoom }
-}
-
-const getPreviewFlowKey = (workflowId: string, workflowJsonData: unknown) => {
-  const size = previewSizes.value[workflowId]
-  const viewport = getPreviewViewport(workflowId, workflowJsonData)
-  const width = size?.width ?? 0
-  const height = size?.height ?? 0
-  return [
-    workflowId,
-    width,
-    height,
-    viewport.x.toFixed(2),
-    viewport.y.toFixed(2),
-    viewport.zoom.toFixed(4),
-  ].join('_')
-}
 const loadMore = async () => {
   if (viewMode.value !== 'card') return
   if (workflowLoading.value || gridLoadMoreLoading.value || !gridHasMore.value) return
@@ -966,8 +735,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (queryTimer) clearTimeout(queryTimer)
-  previewObservers.forEach((observer) => observer.disconnect())
-  previewObservers.clear()
 })
 </script>
 

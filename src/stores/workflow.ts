@@ -346,7 +346,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
     // inputs 从空变为有值，且含 image 类型时，回填非 outputs 节点的 image/images 字段
     if (previousIsEmpty && nextImageNames.length > 0) {
-      console.log('回填 image/images 字段', nextImageNames)
       const defaultImageSelector = `$inputs.${nextImageNames[0]}`
       let changed = false
 
@@ -366,7 +365,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
       if (changed && selectedNode.value?.id) {
         selectedNode.value = nodes.value.find((node) => node.id === selectedNode.value?.id) || null
       }
-      console.log('更新 nodes.value 字段', nodes.value)
     }
 
     const nextNames = extractNameListFromNodeData(nextData)

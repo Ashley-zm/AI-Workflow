@@ -25,7 +25,7 @@
         @edges-change="onEdgesChange"
         @node-drag-stop="onNodeDragStop"
         :default-viewport="{ zoom: 0.5 }"
-        :min-zoom="0.2"
+        :min-zoom="0.01"
         :max-zoom="4"
         :pan-on-drag="!isLocked"
         :nodes-draggable="!isLocked"

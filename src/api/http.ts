@@ -25,7 +25,7 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const headers = AxiosHeaders.from(config.headers)
   headers.set(
     'Authorization',
-    `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxIiwicm5TdHIiOiJ4TDRTZzlzcGd1dXhYTld5MXZjcDlLSUh5N1J0NE1CeiIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MSwidXNlck5hbWUiOiJhZG1pbiIsImRlcHRJZCI6MTAzLCJkZXB0TmFtZSI6IueglOWPkemDqOmXqCIsImRlcHRDYXRlZ29yeSI6IiJ9.r4iKRF9gZx39gzsk9fXKwSBZ0i87NmSBQ3mOH8SGiKk`,
+    `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxIiwicm5TdHIiOiJVNEFJV3hPNlJKWHRKOHJ5Qkk3bkNrc0xpeHozeEFXVCIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MSwidXNlck5hbWUiOiJhZG1pbiIsImRlcHRJZCI6MTAzLCJkZXB0TmFtZSI6IueglOWPkemDqOmXqCIsImRlcHRDYXRlZ29yeSI6IiJ9.xSYbgn_4x6E5NxaUHqBMGa9vkOwSkheLz_n5DjUYWxU`,
   )
   // headers.set('Authorization', `Bearer ${adminToken}`)
   headers.set('Clientid', clientId)

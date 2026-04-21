@@ -55,18 +55,18 @@
                       </template>
                     </el-dropdown>
                   </div>
-                  <div class="template-preview">
+                  <div class="template-preview justify-center">
                     <div class="template-workflow-icon">
                       <span class="wf-node n1"></span>
                       <span class="wf-node n2"></span>
                       <span class="wf-node n3"></span>
                       <span class="wf-ring"></span>
                     </div>
-                    <div class="template-mini-flow">
+                    <!-- <div class="template-mini-flow">
                       <div class="mini-node"></div>
                       <div class="mini-node"></div>
                       <div class="mini-node"></div>
-                    </div>
+                    </div> -->
                   </div>
                   <p class="template-title">{{ template.templateName }}</p>
                 </article>
