@@ -95,15 +95,19 @@
       <el-scrollbar
         ref="gridScrollbarRef"
         v-if="viewMode === 'card'"
-        :loading="workflowLoading"
-        loading-text="loadingText"
-        max-height="calc(100vh - 135px)"
+        v-loading="workflowLoading"
+        element-loading-text="加载中..."
+        max-height="calc(100vh - 120px)"
         min-height="400px"
         :distance="100"
         @end-reached="loadMore"
         @scroll="onGridScroll"
       >
-        <section v-loading="workflowLoading" class="grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        <section
+          v-loading="workflowLoading"
+          element-loading-text="加载中..."
+          class="grid gap-3 sm:grid-cols-3 xl:grid-cols-4"
+        >
           <article
             v-for="item in workflowItems"
             :key="item.id"
@@ -176,8 +180,7 @@
                 <p class="line-clamp-1 text-xs text-slate-600">{{ item.description || '-' }}</p>
               </div>
             </button>
-
-            <div class="absolute right-2 top-2">
+            <div class="absolute right-2 top-42">
               <el-dropdown
                 trigger="click"
                 :visible="activeActionMenuKey === `card-${item.id}`"
@@ -248,6 +251,8 @@
       <section v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <el-table
           v-loading="workflowLoading"
+          element-loading-text="加载中..."
+          max-height="calc(100vh - 180px)"
           :data="workflowItems"
           class="workflow-table"
           empty-text="暂无匹配的工作流"
@@ -346,7 +351,7 @@
             <el-pagination
               :current-page="pageNum"
               :page-size="pageSize"
-              :page-sizes="[10, 20, 50, 100]"
+              :page-sizes="[15, 20, 50, 100]"
               :total="total"
               layout="total, sizes, prev, pager, next, jumper"
               background
@@ -432,7 +437,7 @@ const editDialogVisible = ref(false)
 const editingWorkflowId = ref('')
 
 const pageNum = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(15)
 const total = ref(0)
 
 const workflowLoading = ref(false)
